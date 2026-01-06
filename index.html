@@ -247,8 +247,8 @@
             };
 
             // "Lub-Dub" ritme met verhoogd volume
-            playPulse(60, 0, 0.15, 0.9);      // Lub (Harder)
-            playPulse(55, 0.2, 0.1, 0.7);     // Dub (Harder)
+            playPulse(60, 0, 0.15, 2.0);      // Lub (Harder)
+            playPulse(55, 0.2, 0.1, 1.7);     // Dub (Harder)
         }
 
         // Zoemer geluid (Harder volume)
@@ -268,7 +268,7 @@
             osc2.frequency.setValueAtTime(103, audioCtx.currentTime);
 
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05); // Volume verhoogd
+            gain.gain.linearRampToValueAtTime(0.30, audioCtx.currentTime + 0.05); // Volume verhoogd
             gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
 
             osc1.connect(gain);
@@ -545,4 +545,5 @@
     </script>
 </body>
 </html>
+
 
