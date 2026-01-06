@@ -8,8 +8,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .answer-btn { transition: all 0.2s ease-in-out; outline: none !important; }
-        .answer-btn:focus { box-shadow: none !important; }
+        .answer-btn { 
+            transition: all 0.2s ease-in-out; 
+            outline: none !important; 
+            -webkit-tap-highlight-color: transparent; /* Voorkomt blauwe highlight op mobiel */
+        }
+        .answer-btn:focus { box-shadow: none !important; outline: none !important; }
         .correct { background-color: #22c55e !important; color: white !important; border: 2px solid white; transform: scale(1.05); }
         .incorrect { background-color: #ef4444 !important; color: white !important; opacity: 0.7; }
         .selected { background-color: #6366f1 !important; color: white !important; border: 2px solid white; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4) !important; }
@@ -17,6 +21,10 @@
         #timer-bar-inner { transition: width 1s linear; }
         .spinner { border: 3px solid rgba(0,0,0,.1); border-radius: 50%; border-top-color: #6366f1; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Animatie voor soepele overgang tussen vragen */
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex items-center justify-center min-h-screen p-4">
@@ -317,7 +325,7 @@
             clearInterval(timerInterval);
 
             if (currentRoundIndex === -1) {
-                elements.questionText.textContent = isQuizmaster ? "Klaar om te beginnen? Deel de code!" : "Wachten tot de quizmaster start...";
+                elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten tot de quizmaster start...";
                 if (isQuizmaster) { 
                     elements.nextBtn.textContent = "Start Quiz"; 
                     elements.nextBtn.classList.remove('hidden'); 
@@ -344,34 +352,37 @@
                 return;
             }
 
-            // Gebruik een mini-vertraging om browser "geheugen" van knoppen te wissen
+            // Gebruik een langere vertraging om browser "geheugen" van knoppen écht te wissen
+            // Dit zorgt voor een korte 'leegte' die visuele resten verwijdert
             setTimeout(() => {
                 const q = round.questions[currentQuestionIndex];
                 displayQuestion(q, round.questions.length);
-            }, 10);
+            }, 50);
         }
 
         function displayQuestion(question, totalInRound) {
+            // Zorg voor een schone start van de selectie
+            playerAnsweredIndex = null;
+            elements.answerButtons.innerHTML = ''; 
+            
             elements.questionText.textContent = question.question;
             elements.questionNumber.textContent = currentGameState.currentQuestionIndex + 1;
             elements.totalQuestions.textContent = totalInRound;
-            
-            // Verzeker dat de index écht op null staat bij de start van een vraag
-            playerAnsweredIndex = null;
 
             question.answers.forEach((answer, index) => {
                 const button = document.createElement('button');
                 button.innerText = answer;
-                button.className = 'answer-btn w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 p-4 rounded-xl text-lg font-medium shadow-sm hover:border-indigo-300 transition-all text-slate-800 dark:text-white';
-                button.dataset.idx = index; // Gebruik dataset voor extra veiligheid
+                // Voeg fade-in klasse toe voor een visuele reset
+                button.className = 'answer-btn fade-in w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 p-4 rounded-xl text-lg font-medium shadow-sm hover:border-indigo-300 transition-all text-slate-800 dark:text-white';
                 
                 if (!isQuizmaster) {
-                    button.onclick = (e) => {
+                    button.onclick = () => {
                         playerAnsweredIndex = index;
                         // Wis alle andere selecties visueel
                         Array.from(elements.answerButtons.children).forEach(b => b.classList.remove('selected'));
                         button.classList.add('selected');
-                        button.blur(); // Haal browser-focus weg
+                        // Verwijder focus volledig
+                        button.blur();
                     };
                 } else {
                     button.classList.add('disabled-btn');
@@ -397,6 +408,7 @@
                 btn.classList.add('disabled-btn');
                 if (i === correctAnswerIndex) {
                     btn.classList.add('correct');
+                    btn.classList.remove('selected');
                 } else if (btn.classList.contains('selected')) {
                     btn.classList.add('incorrect');
                 }
