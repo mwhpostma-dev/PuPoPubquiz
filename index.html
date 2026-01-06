@@ -212,27 +212,34 @@
             }
         }
 
-        // Genereer een tikkend geluid
-        function playTick() {
+        // Genereer een hartslag geluid (lub-dub)
+        function playHeartbeat() {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+            const playThump = (freq, time, volume) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
 
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + time);
+                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + time + 0.1);
 
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime + time);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + time + 0.1);
 
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
 
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+                osc.start(audioCtx.currentTime + time);
+                osc.stop(audioCtx.currentTime + time + 0.1);
+            };
+
+            // Eerste slag (lub)
+            playThump(60, 0, 0.3);
+            // Tweede slag (dub) kort erna
+            playThump(50, 0.15, 0.2);
         }
 
         // Genereer een zoemer geluid
@@ -249,7 +256,7 @@
             osc1.frequency.setValueAtTime(100, audioCtx.currentTime);
             
             osc2.type = 'sawtooth';
-            osc2.frequency.setValueAtTime(103, audioCtx.currentTime); // Kleine detune voor 'dirty' effect
+            osc2.frequency.setValueAtTime(103, audioCtx.currentTime);
 
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
             gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.05);
@@ -370,7 +377,7 @@
             }
 
             if (currentRoundIndex >= rounds.length) {
-                showFinal();
+                showFinalScore();
                 return;
             }
 
@@ -435,7 +442,7 @@
 
             Array.from(elements.answerButtons.children).forEach((btn, i) => {
                 btn.classList.add('disabled-btn');
-                if (i === q.correctAnswerIndex) {
+                if (i === correctAnswerIndex) {
                     btn.classList.add('correct');
                     btn.classList.remove('selected');
                 } else if (btn.classList.contains('selected')) {
@@ -477,8 +484,8 @@
             elements.timerBar.style.width = '100%';
             elements.timerBar.classList.replace('bg-red-500', 'bg-indigo-500');
             
-            // Tik direct af bij start
-            playTick();
+            // Start hartslag direct bij start
+            playHeartbeat();
 
             timerInterval = setInterval(() => {
                 time--;
@@ -486,7 +493,7 @@
                 if(time < 5) elements.timerBar.classList.replace('bg-indigo-500', 'bg-red-500');
                 
                 if (time > 0) {
-                    playTick();
+                    playHeartbeat();
                 } else if (time === 0) {
                     playBuzzer(); // Tijd is om!
                     clearInterval(timerInterval);
@@ -506,7 +513,7 @@
             });
         }
 
-        function showFinal() {
+        function showFinalScore() {
             elements.questionText.parentElement.classList.add('hidden');
             elements.scoreScreen.classList.remove('hidden');
             const list = Array.from(elements.scoreboard.querySelectorAll('div'));
