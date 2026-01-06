@@ -14,62 +14,79 @@
         .selected { background-color: #6366f1 !important; color: white !important; border: 2px solid white; }
         .disabled-btn { pointer-events: none; opacity: 0.6; }
         #timer-bar-inner { transition: width 1s linear; }
+        .spinner { border: 3px solid rgba(0,0,0,.1); border-radius: 50%; border-top-color: #6366f1; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex items-center justify-center min-h-screen p-4">
 
-    <!-- Start Screen -->
-    <div id="start-screen" class="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-8 text-center">
+    <!-- Start Scherm -->
+    <div id="start-screen" class="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-8 text-center border-t-4 border-indigo-600">
+        <!-- LOGO BOVENIN -->
+        <img src="PuPo logo.png" alt="PuPo Logo" class="mx-auto mb-4 w-32 h-auto" onerror="this.style.display='none'">
+        
         <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-6">PuPo Familie Pubquiz 2026</h1>
-        <div class="space-y-4">
-            <input type="text" id="player-name" placeholder="Voer je naam in" class="w-full p-3 rounded-lg bg-slate-200 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <input type="text" id="game-id-input" placeholder="Voer Spel ID in (om mee te doen)" class="w-full p-3 rounded-lg bg-slate-200 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <button id="join-game-btn" class="w-full bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-emerald-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-wait" disabled>Doe mee met spel</button>
-            <p class="text-slate-500 dark:text-slate-400">of</p>
-            <button id="create-game-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-wait" disabled>Maak nieuw spel (Quizmaster)</button>
+        
+        <div id="loading-area" class="mb-4 text-sm">
+            <div class="spinner mr-2"></div> <span id="conn-status">Verbinding maken met database...</span>
         </div>
-        <p id="start-error" class="text-slate-500 mt-4 h-4">Bezig met verbinden...</p>
+
+        <div id="input-area" class="space-y-4 opacity-50 pointer-events-none">
+            <input type="text" id="player-name" placeholder="Voer je naam in" class="w-full p-3 rounded-lg bg-slate-200 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white">
+            <input type="text" id="game-id-input" placeholder="Voer 6-cijferige Spel ID in" class="w-full p-3 rounded-lg bg-slate-200 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white">
+            <button id="join-game-btn" class="w-full bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-emerald-600 transition-colors shadow-md">Doe mee met spel</button>
+            <p class="text-slate-500 dark:text-slate-400 text-sm">of</p>
+            <button id="create-game-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors shadow-md">Maak nieuw spel (Quizmaster)</button>
+        </div>
+        <p id="start-error" class="text-red-500 mt-4 h-4 text-xs font-semibold"></p>
     </div>
 
     <!-- Quiz Container -->
-    <div id="quiz-container" class="hidden w-full max-w-4xl bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-6 md:p-8 text-center">
+    <div id="quiz-container" class="hidden w-full max-w-4xl bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-6 md:p-8 text-center border-t-4 border-indigo-600">
         <div class="flex flex-col md:flex-row gap-8">
-            <!-- Left Side: Quiz -->
+            <!-- Linkerkant: Quiz -->
             <div class="w-full md:w-2/3">
-                <div class="flex justify-between items-center mb-2 text-lg">
-                     <p>Vraag <span id="question-number">1</span>/<span id="total-questions">10</span></p>
-                     <div id="game-id-container" class="text-sm">Spel ID: <strong id="game-id-display" class="cursor-pointer" title="Klik om te kopiëren"></strong></div>
+                <div class="flex items-center gap-4 mb-4">
+                    <!-- LOGO NAAST VOORTGANG -->
+                    <img src="PuPo logo.png" alt="PuPo" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
+                    
+                    <div class="flex-1 text-left">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="font-semibold text-indigo-600 dark:text-indigo-400">Vraag <span id="question-number">1</span>/<span id="total-questions">10</span></p>
+                            <div id="game-id-container" class="text-xs bg-indigo-50 dark:bg-indigo-900/40 px-3 py-1 rounded-full">Code: <strong id="game-id-display"></strong></div>
+                        </div>
+                        <div id="timer" class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                            <div id="timer-bar-inner" class="bg-indigo-500 h-2.5 rounded-full" style="width: 100%"></div>
+                        </div>
+                    </div>
                 </div>
-                 <div id="timer" class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-4">
-                    <div id="timer-bar-inner" class="bg-indigo-500 h-2.5 rounded-full" style="width: 100%"></div>
-                </div>
-                <hr class="border-slate-200 dark:border-slate-700 mb-6">
+                
+                <hr class="border-slate-100 dark:border-slate-700 mb-6">
 
                 <div id="question-area">
-                    <h3 id="round-name" class="text-xl font-bold text-indigo-400 mb-2"></h3>
-                    <h2 id="question-text" class="text-2xl font-semibold mb-6 h-24 flex items-center justify-center">Wachten op de quizmaster...</h2>
-                    <p id="answer-feedback" class="text-lg font-semibold my-4 h-8"></p>
+                    <h3 id="round-name" class="text-xl font-bold text-indigo-400 mb-2 uppercase tracking-widest"></h3>
+                    <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center">Wachten op de quizmaster...</h2>
+                    <p id="answer-feedback" class="text-lg font-bold my-4 h-8"></p>
                     <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
 
-                <div class="mt-8 flex justify-end">
-                    <button id="next-btn" class="hidden bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-200">Volgende Vraag</button>
+                <div class="mt-8 flex justify-center">
+                    <button id="next-btn" class="hidden bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg active:scale-95">Volgende Vraag</button>
                 </div>
             </div>
 
-            <!-- Right Side: Scoreboard -->
-            <div class="w-full md:w-1/3 border-t-2 md:border-t-0 md:border-l-2 border-slate-200 dark:border-slate-700 pt-6 md:pt-0 md:pl-6">
-                 <h3 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Scorebord</h3>
-                 <div id="scoreboard" class="space-y-2 text-left">
-                    <!-- Scores will be populated here -->
-                 </div>
+            <!-- Rechterkant: Scorebord -->
+            <div class="w-full md:w-1/3 border-t-2 md:border-t-0 md:border-l-2 border-slate-100 dark:border-slate-700 pt-6 md:pt-0 md:pl-6 text-left">
+                 <h3 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Tussenstand</h3>
+                 <div id="scoreboard" class="space-y-3"></div>
             </div>
         </div>
-         <!-- Final Score Screen -->
-        <div id="score-screen" class="hidden">
-             <h2 class="text-3xl font-bold mb-4">Quiz Voltooid!</h2>
-             <p id="score-feedback" class="text-lg mb-8"></p>
-             <button id="restart-btn" class="hidden bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-colors duration-200">Nieuw Spel Starten</button>
+        
+        <!-- Eindscherm -->
+        <div id="score-screen" class="hidden py-10">
+             <h2 class="text-4xl font-bold mb-4 text-indigo-600 dark:text-indigo-400 text-center">Quiz Voltooid!</h2>
+             <p id="score-feedback" class="text-2xl mb-8 text-center"></p>
+             <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg mx-auto block">Nieuw Spel Starten</button>
         </div>
     </div>
 
@@ -78,136 +95,120 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // --- VRAGEN ---
+        // --- JOUW CONFIGURATIE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKjOEFstlsSU4DoBRS_QzWGbUEneK7A08",
+            authDomain: "pupo-pub-wuiz.firebaseapp.com",
+            projectId: "pupo-pub-wuiz",
+            storageBucket: "pupo-pub-wuiz.firebasestorage.app",
+            messagingSenderId: "253915553323",
+            appId: "1:253915553323:web:505a8f2a42e12c1845d46e"
+        };
+
+        const appId = 'pupo-pub-quiz-2026';
+
+        // --- VRAGEN (Uit jouw index.html) ---
         const quizRounds = [
             {
                 name: "Algemeen",
                 questions: [
                     { question: "Wat is de hoofdstad van Nederland?", answers: ["Amsterdam", "Rotterdam", "Den Haag", "Utrecht"], correctAnswerIndex: 0 },
-                    { question: "Hoeveel provincies heeft Nederland?", answers: ["10", "11", "12", "13"], correctAnswerIndex: 2 },
+                    { question: "Hoeveel provincies heeft Nederland?", answers: ["10", "11", "12", "13"], correctAnswerIndex: 2 }
                 ]
             },
             {
                 name: "Waar of niet waar?",
                 questions: [
                     { question: "Een groep kraaien wordt ook wel een moord genoemd", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 },
-                    { question: "Het Oktoberfest begint traditioneel in september", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 }},
+                    { question: "Het Oktoberfest begint traditioneel in september", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 }
                 ]
             },
- 	    {
+            {
                 name: "Sport",
                 questions: [
                     { question: "Hoe vaak won Mighty Mike het WK?", answers: ["2", "3", "4", "0"], correctAnswerIndex: 1 },
-                    { question: "Curaçao plaatste zich in November 2025 voor het WK voetbal. Wie is de bondscoach van dit team?", answers: ["Guus Hiddink", "Stanley Menzo", "Ruud Gullit", "Dick Advocaat"], correctAnswerIndex: 3 },
+                    { question: "Curaçao plaatste zich in November 2025 voor het WK voetbal. Wie is de bondscoach van dit team?", answers: ["Guus Hiddink", "Stanley Menzo", "Ruud Gullit", "Dick Advocaat"], correctAnswerIndex: 3 }
                 ]
             },
             {
                 name: "Muziek",
                 questions: [
                     { question: "Wie wordt 'The King of Pop' genoemd?", answers: ["Elvis Presley", "Michael Jackson", "Freddie Mercury", "Elton John"], correctAnswerIndex: 1 },
-                    { question: "Van welk land komt de band ABBA?", answers: ["Noorwegen", "Denemarken", "Finland", "Zweden"], correctAnswerIndex: 3 },
+                    { question: "Van welk land komt de band ABBA?", answers: ["Noorwegen", "Denemarken", "Finland", "Zweden"], correctAnswerIndex: 3 }
                 ]
             },
             {
                 name: "Familie",
                 questions: [
                     { question: "Wat is de geboortemaand van de meeste mensen in onze familie?", answers: ["Januari", "Mei", "Augustus", "Oktober"], correctAnswerIndex: 2 },
-                    { question: "Welk spel spelen we het vaakst op familieweekenden?", answers: ["Catan", "30 Seconds", "Monopoly", "Kaarten"], correctAnswerIndex: 1 },
+                    { question: "Welk spel spelen we het vaakst op familieweekenden?", answers: ["Catan", "30 Seconds", "Monopoly", "Kaarten"], correctAnswerIndex: 1 }
                 ]
             }
         ];
 
-        // --- ELEMENTEN ---
-        const startScreen = document.getElementById('start-screen');
-        const quizContainer = document.getElementById('quiz-container');
-        const playerNameInput = document.getElementById('player-name');
-        const gameIdInput = document.getElementById('game-id-input');
-        const createGameBtn = document.getElementById('create-game-btn');
-        const joinGameBtn = document.getElementById('join-game-btn');
-        const startError = document.getElementById('start-error');
-        const roundNameEl = document.getElementById('round-name');
-        const questionTextEl = document.getElementById('question-text');
-        const answerButtonsEl = document.getElementById('answer-buttons');
-        const nextBtn = document.getElementById('next-btn');
-        const gameIdDisplay = document.getElementById('game-id-display');
-        const scoreboard = document.getElementById('scoreboard');
-        const questionNumberEl = document.getElementById('question-number');
-        const totalQuestionsEl = document.getElementById('total-questions');
-        const scoreScreen = document.getElementById('score-screen');
-        const scoreFeedbackEl = document.getElementById('score-feedback');
-        const restartBtn = document.getElementById('restart-btn');
-        const timerBar = document.getElementById('timer-bar-inner');
-        const answerFeedbackEl = document.getElementById('answer-feedback');
-        
-        // --- FIREBASE & APP STATE ---
-        let app, db, auth;
-        let userId, playerName, gameId, isQuizmaster = false;
-        let playerDocId;
-        let playerAnsweredIndex = null;
-        let unsubscribeGame, unsubscribePlayers;
-        let currentGameState = {};
-        let timerInterval;
+        let db, auth, userId, playerName, gameId, isQuizmaster = false, playerDocId, playerAnsweredIndex = null;
+        let currentGameState = {}, timerInterval, unsubscribeGame, unsubscribePlayers;
         const QUESTION_TIME = 20;
 
-        const appId = 'default-pubquiz-app';
-
-        // --- FIREBASE CONFIGURATIE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyBKjOEFstlsSU4DoBRS_QzWGbUEneK7A08",
-            authDomain: "pupo-pub-wuiz.firebaseapp.com",
-            projectId: "pupo-pub-wuiz",
-            storageBucket: "pupo-pub-wuiz.appspot.com",
-            messagingSenderId: "253915553323",
-            appId: "1:253915553323:web:505a8f2a42e12c1845d46e"
+        const elements = {
+            startScreen: document.getElementById('start-screen'),
+            quizContainer: document.getElementById('quiz-container'),
+            playerNameInput: document.getElementById('player-name'),
+            gameIdInput: document.getElementById('game-id-input'),
+            createGameBtn: document.getElementById('create-game-btn'),
+            joinGameBtn: document.getElementById('join-game-btn'),
+            startError: document.getElementById('start-error'),
+            roundName: document.getElementById('round-name'),
+            questionText: document.getElementById('question-text'),
+            answerButtons: document.getElementById('answer-buttons'),
+            nextBtn: document.getElementById('next-btn'),
+            gameIdDisplay: document.getElementById('game-id-display'),
+            scoreboard: document.getElementById('scoreboard'),
+            questionNumber: document.getElementById('question-number'),
+            totalQuestions: document.getElementById('total-questions'),
+            scoreScreen: document.getElementById('score-screen'),
+            scoreFeedback: document.getElementById('score-feedback'),
+            restartBtn: document.getElementById('restart-btn'),
+            timerBar: document.getElementById('timer-bar-inner'),
+            answerFeedback: document.getElementById('answer-feedback'),
+            loadingArea: document.getElementById('loading-area'),
+            inputArea: document.getElementById('input-area')
         };
-        // --- EINDE CONFIGURATIE ---
 
-        async function initialize() {
+        // Verbinding opstarten
+        async function init() {
             try {
-                app = initializeApp(firebaseConfig);
+                const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        createGameBtn.disabled = false;
-                        joinGameBtn.disabled = false;
-                        startError.textContent = "";
+                        elements.loadingArea.classList.add('hidden');
+                        elements.inputArea.classList.remove('opacity-50', 'pointer-events-none');
                     } else {
                         await signInAnonymously(auth);
                     }
                 });
-            } catch (error) {
-                console.error("Firebase init failed:", error);
-                startError.textContent = "Kon niet verbinden. Probeer opnieuw.";
+            } catch (err) {
+                elements.startError.textContent = "Databasefout. Probeer te verversen.";
             }
         }
 
-        function validateInput(isJoining) {
-            playerName = playerNameInput.value.trim();
-            if (!playerName) {
-                startError.textContent = "Vul alsjeblieft een naam in.";
-                return false;
-            }
-            if (isJoining) {
-                gameId = gameIdInput.value.trim(); 
-                if (!gameId) {
-                    startError.textContent = "Vul een Spel ID in om mee te doen.";
-                    return false;
-                }
-            }
-            startError.textContent = "";
-            return true;
-        }
-
+        // Spel aanmaken
         async function createGame() {
-            if (!validateInput(false)) return;
+            playerName = elements.playerNameInput.value.trim();
+            if (!playerName) { elements.startError.textContent = "Vul je naam in."; return; }
+            if (!userId) return;
+
+            elements.createGameBtn.disabled = true;
             isQuizmaster = true;
+            
             try {
                 gameId = Math.floor(100000 + Math.random() * 900000).toString();
-                const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
-
+                const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+                
                 await setDoc(gameRef, {
                     quizmasterId: userId,
                     currentRoundIndex: -1,
@@ -218,355 +219,229 @@
                 });
 
                 await setupPlayer();
-                startGameListeners();
-            } catch (error) {
-                console.error("Error creating game:", error);
-                startError.textContent = "Kon spel niet aanmaken.";
+                startListeners();
+            } catch (err) {
+                elements.createGameBtn.disabled = false;
+                elements.startError.textContent = "Kon spel niet aanmaken.";
             }
         }
 
+        // Deelnemen
         async function joinGame() {
-            if (!validateInput(true)) return;
+            playerName = elements.playerNameInput.value.trim();
+            gameId = elements.gameIdInput.value.trim();
+            if (!playerName || !gameId) { elements.startError.textContent = "Naam en Code verplicht."; return; }
+            
+            elements.joinGameBtn.disabled = true;
             try {
-                const gameRef = doc(db, `artifacts/${appId}/public/data/games/${gameId}`);
-                const gameSnap = await getDoc(gameRef);
+                const gameSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
                 if (!gameSnap.exists()) {
-                    startError.textContent = "Spel ID niet gevonden.";
+                    elements.startError.textContent = "Onjuiste code.";
+                    elements.joinGameBtn.disabled = false;
                     return;
                 }
                 isQuizmaster = false;
                 await setupPlayer();
-                startGameListeners();
-            } catch (error) {
-                console.error("Error joining game:", error);
-                startError.textContent = "Kon niet meedoen met spel.";
+                startListeners();
+            } catch (err) {
+                elements.joinGameBtn.disabled = false;
+                elements.startError.textContent = "Fout bij meedoen.";
             }
         }
-        
+
         async function setupPlayer() {
-            const playersCollectionRef = collection(db, `artifacts/${appId}/public/data/games/${gameId}/players`);
-            const playerDocRef = await addDoc(playersCollectionRef, {
+            const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'games', gameId, 'players');
+            const docRef = await addDoc(playersRef, {
                 name: playerName,
                 score: 0,
                 isQuizmaster: isQuizmaster,
                 authId: userId
             });
-            playerDocId = playerDocRef.id;
+            playerDocId = docRef.id;
         }
-        
-        function startGameListeners() {
-            startScreen.classList.add('hidden');
-            quizContainer.classList.remove('hidden');
-            gameIdDisplay.textContent = gameId;
 
-            if (!isQuizmaster) {
-                document.getElementById('game-id-container').classList.add('hidden');
-            }
+        function startListeners() {
+            elements.startScreen.classList.add('hidden');
+            elements.quizContainer.classList.remove('hidden');
+            elements.gameIdDisplay.textContent = gameId;
 
-            const gameRef = doc(db, `artifacts/${appId}/public/data/games/${gameId}`);
-            unsubscribeGame = onSnapshot(gameRef, (docSnap) => handleGameStateUpdate(docSnap.data()));
+            if (!isQuizmaster) document.getElementById('game-id-container').style.display = 'none';
 
-            const playersRef = collection(db, `artifacts/${appId}/public/data/games/${gameId}/players`);
-            unsubscribePlayers = onSnapshot(playersRef, (querySnapshot) => {
+            unsubscribeGame = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), (snap) => {
+                const state = snap.data();
+                if (!state) return;
+                const oldState = currentGameState;
+                currentGameState = state;
+                
+                if (state.currentRoundIndex !== oldState.currentRoundIndex || state.currentQuestionIndex !== oldState.currentQuestionIndex) {
+                    renderUI();
+                }
+                if (state.isRevealingAnswers && !oldState.isRevealingAnswers) {
+                    revealAnswers();
+                }
+            });
+
+            unsubscribePlayers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'games', gameId, 'players'), (snap) => {
                 const players = [];
-                querySnapshot.forEach((doc) => players.push({ id: doc.id, ...doc.data() }));
+                snap.forEach(d => players.push({id: d.id, ...d.data()}));
                 updateScoreboard(players);
             });
         }
 
-        function handleGameStateUpdate(gameState) {
-            if (!gameState) return;
-            
-            const oldState = currentGameState;
-            currentGameState = gameState;
-            const { currentRoundIndex, currentQuestionIndex } = gameState;
-
-            // Update on state change
-            if (currentRoundIndex !== oldState.currentRoundIndex || currentQuestionIndex !== oldState.currentQuestionIndex) {
-                 updateDisplay(gameState);
-            }
-            
-            if (gameState.isRevealingAnswers && !oldState.isRevealingAnswers) {
-                revealAnswers();
-            }
-        }
-
-        function updateDisplay(gameState) {
-            const { currentRoundIndex, currentQuestionIndex, rounds } = gameState;
-
-            // Hide everything by default
-            answerButtonsEl.innerHTML = '';
-            answerFeedbackEl.textContent = '';
-            nextBtn.classList.add('hidden');
-            roundNameEl.textContent = '';
-            
-            // Total quiz lobby
-            if (currentRoundIndex === -1) {
-                if (isQuizmaster) {
-                    questionTextEl.textContent = "Deel de Spel ID en klik op 'Start Quiz' om te beginnen.";
-                    nextBtn.textContent = "Start Quiz";
-                    nextBtn.classList.remove('hidden');
-                } else {
-                    questionTextEl.textContent = "Wachten op de quizmaster om te starten...";
-                }
-                return;
-            }
-            
-            // End of quiz
-            if (currentRoundIndex >= rounds.length) {
-                showFinalScore();
-                return;
-            }
-
-            const currentRound = rounds[currentRoundIndex];
-            roundNameEl.textContent = `Ronde: ${currentRound.name}`;
-
-            // Pre-round lobby
-            if (currentQuestionIndex === -1) {
-                if (isQuizmaster) {
-                    questionTextEl.textContent = `Klaar voor de ronde "${currentRound.name}"?`;
-                    nextBtn.textContent = `Start Ronde`;
-                    nextBtn.classList.remove('hidden');
-                } else {
-                    questionTextEl.textContent = `De volgende ronde is "${currentRound.name}". Wacht op de quizmaster.`;
-                }
-                 return;
-            }
-
-            // Display question
-            displayQuestion();
-        }
-
-
-        function displayQuestion() {
-            scoreScreen.classList.add('hidden');
-            questionTextEl.parentElement.classList.remove('hidden');
-            resetStateForNewQuestion();
-
+        function renderUI() {
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
-            const round = rounds[currentRoundIndex];
-            const question = round.questions[currentQuestionIndex];
-            
-            questionTextEl.textContent = question.question;
-            questionNumberEl.textContent = currentQuestionIndex + 1;
-            totalQuestionsEl.textContent = round.questions.length;
+            elements.answerButtons.innerHTML = '';
+            elements.answerFeedback.textContent = '';
+            elements.nextBtn.classList.add('hidden');
+            playerAnsweredIndex = null;
+            clearInterval(timerInterval);
 
-            question.answers.forEach((answer, index) => {
-                const button = document.createElement('button');
-                button.innerText = answer;
-                button.classList.add('answer-btn', 'w-full', 'bg-slate-200', 'dark:bg-slate-700', 'p-4', 'rounded-lg', 'text-lg', 'hover:bg-slate-300', 'dark:hover:bg-slate-600');
-                button.dataset.index = index;
-                
-                if (!isQuizmaster) {
-                    button.addEventListener('click', selectAnswer);
-                } else {
-                    button.classList.add('disabled-btn');
+            if (currentRoundIndex === -1) {
+                elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten op de start...";
+                if (isQuizmaster) { 
+                    elements.nextBtn.textContent = "Start Quiz"; 
+                    elements.nextBtn.classList.remove('hidden'); 
                 }
-                
-                answerButtonsEl.appendChild(button);
+                return;
+            }
+
+            if (currentRoundIndex >= rounds.length) {
+                showFinal();
+                return;
+            }
+
+            const round = rounds[currentRoundIndex];
+            elements.roundName.textContent = `Ronde: ${round.name}`;
+
+            if (currentQuestionIndex === -1) {
+                elements.questionText.textContent = isQuizmaster ? `Ronde: ${round.name}` : `Bereid je voor op ${round.name}...`;
+                if (isQuizmaster) { 
+                    elements.nextBtn.textContent = "Start Ronde"; 
+                    elements.nextBtn.classList.remove('hidden'); 
+                }
+                return;
+            }
+
+            const q = round.questions[currentQuestionIndex];
+            elements.questionText.textContent = q.question;
+            elements.questionNumber.textContent = currentQuestionIndex + 1;
+            elements.totalQuestions.textContent = round.questions.length;
+
+            q.answers.forEach((ans, idx) => {
+                const btn = document.createElement('button');
+                btn.innerText = ans;
+                btn.className = 'answer-btn w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 p-4 rounded-xl text-lg font-medium shadow-sm hover:border-indigo-300 transition-all';
+                if (!isQuizmaster) {
+                    btn.onclick = () => {
+                        if (playerAnsweredIndex !== null) return;
+                        playerAnsweredIndex = idx;
+                        btn.classList.add('selected');
+                        Array.from(elements.answerButtons.children).forEach(b => b.classList.add('disabled-btn'));
+                    };
+                } else {
+                    btn.classList.add('disabled-btn');
+                }
+                elements.answerButtons.appendChild(btn);
             });
             startTimer();
         }
-        
+
         function revealAnswers() {
             clearInterval(timerInterval);
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
-            const question = rounds[currentRoundIndex].questions[currentQuestionIndex];
-            const correctAnswerIndex = question.correctAnswerIndex;
+            const q = rounds[currentRoundIndex].questions[currentQuestionIndex];
             
-            if (!isQuizmaster && playerAnsweredIndex !== null) {
-                if (playerAnsweredIndex === correctAnswerIndex) {
-                    (async () => {
-                        const playerRef = doc(db, `artifacts/${appId}/public/data/games/${gameId}/players/${playerDocId}`);
-                        const playerSnap = await getDoc(playerRef);
-                        if (playerSnap.exists()) {
-                           const currentScore = playerSnap.data().score;
-                           await updateDoc(playerRef, { score: currentScore + 1 });
-                        }
-                    })();
-                }
+            if (!isQuizmaster && playerAnsweredIndex === q.correctAnswerIndex) {
+                const pRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId, 'players', playerDocId);
+                getDoc(pRef).then(s => updateDoc(pRef, { score: (s.data().score || 0) + 1 }));
             }
-            
-            Array.from(answerButtonsEl.children).forEach((button, index) => {
-                button.classList.add('disabled-btn');
-                if (index === correctAnswerIndex) {
-                    button.classList.add('correct');
-                    button.classList.remove('selected');
-                } else if (button.classList.contains('selected')) {
-                    button.classList.add('incorrect');
+
+            Array.from(elements.answerButtons.children).forEach((btn, i) => {
+                btn.classList.add('disabled-btn');
+                if (i === q.correctAnswerIndex) {
+                    btn.classList.add('correct');
+                    btn.classList.remove('selected');
+                } else if (btn.classList.contains('selected')) {
+                    btn.classList.add('incorrect');
                 }
             });
 
             if (!isQuizmaster) {
-                if (playerAnsweredIndex !== null) {
-                    if (playerAnsweredIndex === correctAnswerIndex) {
-                        answerFeedbackEl.textContent = "Het antwoord is goed!";
-                        answerFeedbackEl.className = 'text-lg font-semibold my-4 h-8 text-green-500';
-                    } else {
-                        answerFeedbackEl.textContent = "Helaas, het antwoord is fout.";
-                        answerFeedbackEl.className = 'text-lg font-semibold my-4 h-8 text-red-500';
-                    }
+                if (playerAnsweredIndex === q.correctAnswerIndex) {
+                    elements.answerFeedback.textContent = "Goed gedaan! +1 punt";
+                    elements.answerFeedback.className = "text-lg font-bold my-4 text-green-500";
                 } else {
-                    answerFeedbackEl.textContent = "Helaas, je was te laat.";
-                    answerFeedbackEl.className = 'text-lg font-semibold my-4 h-8 text-red-500';
+                    elements.answerFeedback.textContent = playerAnsweredIndex === null ? "Helaas, je was te laat!" : "Helaas, fout!";
+                    elements.answerFeedback.className = "text-lg font-bold my-4 text-red-500";
                 }
             }
 
-            if (isQuizmaster) {
-                nextBtn.textContent = 'Volgende Vraag';
-                nextBtn.classList.remove('hidden');
+            if (isQuizmaster) { 
+                elements.nextBtn.textContent = 'Volgende'; 
+                elements.nextBtn.classList.remove('hidden'); 
             }
         }
 
+        async function advance() {
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+            const { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers } = currentGameState;
 
-        async function selectAnswer(e) {
-            const selectedBtn = e.target;
-            if (document.querySelector('.answer-btn.selected')) return;
-
-            selectedBtn.classList.add('selected');
-            Array.from(answerButtonsEl.children).forEach(button => button.classList.add('disabled-btn'));
-            
-            playerAnsweredIndex = parseInt(selectedBtn.dataset.index);
-        }
-        
-        function updateScoreboard(players) {
-            scoreboard.innerHTML = '';
-            const participants = players.filter(p => !p.isQuizmaster);
-            participants.sort((a, b) => b.score - a.score);
-            participants.forEach(player => {
-                const div = document.createElement('div');
-                div.classList.add('flex', 'justify-between', 'items-center', 'p-2', 'rounded-md');
-                if (player.id === playerDocId) div.classList.add('bg-indigo-100', 'dark:bg-indigo-900');
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = player.name;
-                const scoreSpan = document.createElement('span');
-                scoreSpan.textContent = player.score;
-                scoreSpan.classList.add('font-bold');
-                
-                div.appendChild(nameSpan);
-                div.appendChild(scoreSpan);
-                scoreboard.appendChild(div);
-            });
-        }
-        
-        async function advanceGame() {
-            const gameRef = doc(db, `artifacts/${appId}/public/data/games/${gameId}`);
-            let { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers } = currentGameState;
-
-            // Case 1: Start of the entire quiz (from main lobby)
             if (currentRoundIndex === -1) {
-                await updateDoc(gameRef, { 
-                    currentRoundIndex: 0,
-                    currentQuestionIndex: -1, // Go to the pre-round lobby for round 0
-                    isRevealingAnswers: false
-                });
-                return;
+                return updateDoc(ref, { currentRoundIndex: 0, currentQuestionIndex: -1 });
             }
-
-            // Case 2: Start of a new round (from pre-round lobby)
-            if (currentQuestionIndex === -1 && currentRoundIndex < rounds.length) {
-                 await updateDoc(gameRef, {
-                    currentQuestionIndex: 0, // Start with the first question
-                    isRevealingAnswers: false
-                });
-                return;
+            if (currentQuestionIndex === -1) {
+                return updateDoc(ref, { currentQuestionIndex: 0, isRevealingAnswers: false });
             }
-
-            // Case 3: Revealing answers for the current question
             if (!isRevealingAnswers) {
-                await updateDoc(gameRef, { isRevealingAnswers: true });
-                return;
+                return updateDoc(ref, { isRevealingAnswers: true });
             }
 
-            // Case 4: Moving to the next question or next round lobby
-            const currentRound = rounds[currentRoundIndex];
-            if (currentQuestionIndex < currentRound.questions.length - 1) {
-                // More questions in this round
-                await updateDoc(gameRef, {
-                    currentQuestionIndex: currentQuestionIndex + 1,
-                    isRevealingAnswers: false
-                });
+            if (currentQuestionIndex < rounds[currentRoundIndex].questions.length - 1) {
+                updateDoc(ref, { currentQuestionIndex: currentQuestionIndex + 1, isRevealingAnswers: false });
             } else {
-                // End of round, go to next round's lobby
-                await updateDoc(gameRef, {
-                    currentRoundIndex: currentRoundIndex + 1,
-                    currentQuestionIndex: -1,
-                    isRevealingAnswers: false
-                });
+                updateDoc(ref, { currentRoundIndex: currentRoundIndex + 1, currentQuestionIndex: -1, isRevealingAnswers: false });
             }
         }
 
-        function resetStateForNewQuestion() {
-            nextBtn.classList.add('hidden');
-            answerButtonsEl.innerHTML = '';
-            answerFeedbackEl.textContent = '';
-            playerAnsweredIndex = null;
-        }
-        
         function startTimer() {
-            clearInterval(timerInterval);
-            let timeLeft = QUESTION_TIME;
-            timerBar.style.width = '100%';
-            timerBar.classList.remove('bg-red-500');
-            timerBar.classList.add('bg-indigo-500');
-
-            timerInterval = setInterval(async () => {
-                timeLeft--;
-                const percentage = (timeLeft / QUESTION_TIME) * 100;
-                timerBar.style.width = `${percentage}%`;
-                if(timeLeft < 5) timerBar.classList.add('bg-red-500');
-                
-                if (timeLeft <= 0) {
+            let time = QUESTION_TIME;
+            elements.timerBar.style.width = '100%';
+            elements.timerBar.classList.replace('bg-red-500', 'bg-indigo-500');
+            timerInterval = setInterval(() => {
+                time--;
+                elements.timerBar.style.width = `${(time/QUESTION_TIME)*100}%`;
+                if(time < 5) elements.timerBar.classList.replace('bg-indigo-500', 'bg-red-500');
+                if (time <= 0) {
                     clearInterval(timerInterval);
-                    if (isQuizmaster) {
-                        const gameRef = doc(db, `artifacts/${appId}/public/data/games/${gameId}`);
-                        await updateDoc(gameRef, { isRevealingAnswers: true });
-                    }
+                    if (isQuizmaster) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), { isRevealingAnswers: true });
                 }
             }, 1000);
         }
 
-        function showFinalScore() {
-            questionTextEl.parentElement.classList.add('hidden');
-            nextBtn.classList.add('hidden');
-            scoreScreen.classList.remove('hidden');
-            
-            const players = Array.from(scoreboard.children).map(child => ({
-                name: child.querySelector('span:first-child').textContent,
-                score: parseInt(child.querySelector('span:last-child').textContent)
-            }));
-            
-            if (players.length > 0) {
-                players.sort((a,b) => b.score - a.score);
-                const winner = players[0];
-                scoreFeedbackEl.innerHTML = `De winnaar is <strong class="text-indigo-500">${winner.name}</strong> met ${winner.score} punten!`;
-            } else {
-                 scoreFeedbackEl.textContent = "De quiz is voorbij!";
-            }
-            
-            if(isQuizmaster) {
-                restartBtn.classList.remove('hidden');
-            }
-        }
-        
-        function copyGameId() {
-            navigator.clipboard.writeText(gameId).then(() => {
-                const originalText = gameIdDisplay.textContent;
-                gameIdDisplay.textContent = 'Gekopieerd!';
-                setTimeout(() => { gameIdDisplay.textContent = originalText; }, 1500);
+        function updateScoreboard(players) {
+            elements.scoreboard.innerHTML = '';
+            const list = players.filter(p => !p.isQuizmaster).sort((a,b) => b.score - a.score);
+            list.forEach(p => {
+                const d = document.createElement('div');
+                d.className = `flex justify-between p-3 rounded-xl shadow-sm border ${p.authId === userId ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'}`;
+                d.innerHTML = `<span class="font-medium text-slate-700">${p.name}</span><span class="font-bold text-indigo-600">${p.score}</span>`;
+                elements.scoreboard.appendChild(d);
             });
         }
+
+        function showFinal() {
+            elements.questionText.parentElement.classList.add('hidden');
+            elements.scoreScreen.classList.remove('hidden');
+            const winner = elements.scoreboard.firstChild?.firstChild?.textContent;
+            elements.scoreFeedback.innerHTML = winner ? `🏆 De winnaar is: <strong class="text-indigo-600">${winner}</strong>` : "De quiz is afgelopen!";
+        }
+
+        elements.createGameBtn.onclick = createGame;
+        elements.joinGameBtn.onclick = joinGame;
+        elements.nextBtn.onclick = advance;
+        elements.restartBtn.onclick = () => location.reload();
         
-        // --- EVENT LISTENERS ---
-        createGameBtn.addEventListener('click', createGame);
-        joinGameBtn.addEventListener('click', joinGame);
-        nextBtn.addEventListener('click', advanceGame);
-        gameIdDisplay.addEventListener('click', copyGameId);
-        restartBtn.addEventListener('click', createGame);
-        
-        initialize();
+        init();
     </script>
 </body>
 </html>
-
