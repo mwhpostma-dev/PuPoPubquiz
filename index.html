@@ -11,7 +11,7 @@
         .answer-btn { transition: all 0.2s ease-in-out; }
         .correct { background-color: #22c55e !important; color: white !important; border: 2px solid white; transform: scale(1.05); }
         .incorrect { background-color: #ef4444 !important; color: white !important; opacity: 0.7; }
-        .selected { background-color: #6366f1 !important; color: white !important; border: 2px solid white; }
+        .selected { background-color: #6366f1 !important; color: white !important; border: 2px solid white; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
         .disabled-btn { pointer-events: none; opacity: 0.6; }
         #timer-bar-inner { transition: width 1s linear; }
         .spinner { border: 3px solid rgba(0,0,0,.1); border-radius: 50%; border-top-color: #6366f1; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
@@ -20,17 +20,29 @@
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex items-center justify-center min-h-screen p-4">
 
+    <!-- Audio Element voor de timer (tikkend geluid/muziekje) -->
+    <audio id="timer-audio" src="https://www.soundjay.com/misc/sounds/clock-ticking-2.mp3" loop></audio>
+
+    <!-- Geluidsknop rechtsboven -->
+    <div class="fixed top-4 right-4 z-50">
+        <button id="toggle-sound-btn" class="bg-white dark:bg-slate-800 p-2 rounded-full shadow-md border border-slate-200 flex items-center justify-center">
+            <svg id="sound-on-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+            <svg id="sound-off-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-400 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+            </svg>
+        </button>
+    </div>
+
     <!-- Start Scherm -->
     <div id="start-screen" class="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-8 text-center border-t-4 border-indigo-600">
-        <!-- LOGO BOVENIN -->
         <img src="PuPo logo.png" alt="PuPo Logo" class="mx-auto mb-4 w-32 h-auto" onerror="this.style.display='none'">
-        
         <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-6">PuPo Familie Pubquiz 2026</h1>
-        
         <div id="loading-area" class="mb-4 text-sm">
             <div class="spinner mr-2"></div> <span id="conn-status">Verbinding maken met database...</span>
         </div>
-
         <div id="input-area" class="space-y-4 opacity-50 pointer-events-none">
             <input type="text" id="player-name" placeholder="Voer je naam in" class="w-full p-3 rounded-lg bg-slate-200 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white">
             <input type="text" id="game-id-input" placeholder="Voer 6-cijferige Spel ID in" class="w-full p-3 rounded-lg bg-slate-200 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white">
@@ -44,12 +56,9 @@
     <!-- Quiz Container -->
     <div id="quiz-container" class="hidden w-full max-w-4xl bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-6 md:p-8 text-center border-t-4 border-indigo-600">
         <div class="flex flex-col md:flex-row gap-8">
-            <!-- Linkerkant: Quiz -->
             <div class="w-full md:w-2/3">
                 <div class="flex items-center gap-4 mb-4">
-                    <!-- LOGO NAAST VOORTGANG -->
                     <img src="PuPo logo.png" alt="PuPo" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
-                    
                     <div class="flex-1 text-left">
                         <div class="flex justify-between items-center mb-1">
                             <p class="font-semibold text-indigo-600 dark:text-indigo-400">Vraag <span id="question-number">1</span>/<span id="total-questions">10</span></p>
@@ -60,29 +69,22 @@
                         </div>
                     </div>
                 </div>
-                
                 <hr class="border-slate-100 dark:border-slate-700 mb-6">
-
                 <div id="question-area">
                     <h3 id="round-name" class="text-xl font-bold text-indigo-400 mb-2 uppercase tracking-widest"></h3>
                     <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center text-slate-800 dark:text-white">Wachten op de quizmaster...</h2>
                     <p id="answer-feedback" class="text-lg font-bold my-4 h-8"></p>
                     <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
-
                 <div class="mt-8 flex justify-center">
                     <button id="next-btn" class="hidden bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg active:scale-95">Volgende Vraag</button>
                 </div>
             </div>
-
-            <!-- Rechterkant: Scorebord -->
             <div class="w-full md:w-1/3 border-t-2 md:border-t-0 md:border-l-2 border-slate-100 dark:border-slate-700 pt-6 md:pt-0 md:pl-6 text-left">
                  <h3 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Tussenstand</h3>
                  <div id="scoreboard" class="space-y-3"></div>
             </div>
         </div>
-        
-        <!-- Eindscherm -->
         <div id="score-screen" class="hidden py-10">
              <h2 class="text-4xl font-bold mb-4 text-indigo-600 dark:text-indigo-400 text-center">Quiz Voltooid!</h2>
              <p id="score-feedback" class="text-2xl mb-8 text-center"></p>
@@ -95,7 +97,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // --- JOUW CONFIGURATIE ---
         const firebaseConfig = {
             apiKey: "AIzaSyBKjOEFstlsSU4DoBRS_QzWGbUEneK7A08",
             authDomain: "pupo-pub-wuiz.firebaseapp.com",
@@ -107,47 +108,32 @@
 
         const appId = 'pupo-pub-quiz-2026';
 
-        // --- VRAGEN ---
         const quizRounds = [
-            {
-                name: "Algemeen",
-                questions: [
-                    { question: "Wat is de hoofdstad van Nederland?", answers: ["Amsterdam", "Rotterdam", "Den Haag", "Utrecht"], correctAnswerIndex: 0 },
-                    { question: "Hoeveel provincies heeft Nederland?", answers: ["10", "11", "12", "13"], correctAnswerIndex: 2 }
-                ]
-            },
-            {
-                name: "Waar of niet waar?",
-                questions: [
-                    { question: "Een groep kraaien wordt ook wel een moord genoemd", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 },
-                    { question: "Het Oktoberfest begint traditioneel in september", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 }
-                ]
-            },
-            {
-                name: "Sport",
-                questions: [
-                    { question: "Hoe vaak won Mighty Mike het WK?", answers: ["2", "3", "4", "0"], correctAnswerIndex: 1 },
-                    { question: "Curaçao plaatste zich in November 2025 voor het WK voetbal. Wie is de bondscoach van dit team?", answers: ["Guus Hiddink", "Stanley Menzo", "Ruud Gullit", "Dick Advocaat"], correctAnswerIndex: 3 }
-                ]
-            },
-            {
-                name: "Muziek",
-                questions: [
-                    { question: "Wie wordt 'The King of Pop' genoemd?", answers: ["Elvis Presley", "Michael Jackson", "Freddie Mercury", "Elton John"], correctAnswerIndex: 1 },
-                    { question: "Van welk land komt de band ABBA?", answers: ["Noorwegen", "Denemarken", "Finland", "Zweden"], correctAnswerIndex: 3 }
-                ]
-            },
-            {
-                name: "Familie",
-                questions: [
-                    { question: "Wat is de geboortemaand van de meeste mensen in onze familie?", answers: ["Januari", "Mei", "Augustus", "Oktober"], correctAnswerIndex: 2 },
-                    { question: "Welk spel spelen we het vaakst op familieweekenden?", answers: ["Catan", "30 Seconds", "Monopoly", "Kaarten"], correctAnswerIndex: 1 }
-                ]
-            }
+            { name: "Algemeen", questions: [
+                { question: "Wat is de hoofdstad van Nederland?", answers: ["Amsterdam", "Rotterdam", "Den Haag", "Utrecht"], correctAnswerIndex: 0 },
+                { question: "Hoeveel provincies heeft Nederland?", answers: ["10", "11", "12", "13"], correctAnswerIndex: 2 }
+            ]},
+            { name: "Waar of niet waar?", questions: [
+                { question: "Een groep kraaien wordt ook wel een moord genoemd", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 },
+                { question: "Het Oktoberfest begint traditioneel in september", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 }
+            ]},
+            { name: "Sport", questions: [
+                { question: "Hoe vaak won Mighty Mike het WK?", answers: ["2", "3", "4", "0"], correctAnswerIndex: 1 },
+                { question: "Curaçao plaatste zich in November 2025 voor het WK voetbal. Wie is de bondscoach van dit team?", answers: ["Guus Hiddink", "Stanley Menzo", "Ruud Gullit", "Dick Advocaat"], correctAnswerIndex: 3 }
+            ]},
+            { name: "Muziek", questions: [
+                { question: "Wie wordt 'The King of Pop' genoemd?", answers: ["Elvis Presley", "Michael Jackson", "Freddie Mercury", "Elton John"], correctAnswerIndex: 1 },
+                { question: "Van welk land komt de band ABBA?", answers: ["Noorwegen", "Denemarken", "Finland", "Zweden"], correctAnswerIndex: 3 }
+            ]},
+            { name: "Familie", questions: [
+                { question: "Wat is de geboortemaand van de meeste mensen in onze familie?", answers: ["Januari", "Mei", "Augustus", "Oktober"], correctAnswerIndex: 2 },
+                { question: "Welk spel spelen we het vaakst op familieweekenden?", answers: ["Catan", "30 Seconds", "Monopoly", "Kaarten"], correctAnswerIndex: 1 }
+            ]}
         ];
 
         let db, auth, userId, playerName, gameId, isQuizmaster = false, playerDocId, playerAnsweredIndex = null;
         let currentGameState = {}, timerInterval, unsubscribeGame, unsubscribePlayers;
+        let isSoundEnabled = true;
         const QUESTION_TIME = 20;
 
         const elements = {
@@ -172,10 +158,13 @@
             timerBar: document.getElementById('timer-bar-inner'),
             answerFeedback: document.getElementById('answer-feedback'),
             loadingArea: document.getElementById('loading-area'),
-            inputArea: document.getElementById('input-area')
+            inputArea: document.getElementById('input-area'),
+            timerAudio: document.getElementById('timer-audio'),
+            soundToggleBtn: document.getElementById('toggle-sound-btn'),
+            soundOnIcon: document.getElementById('sound-on-icon'),
+            soundOffIcon: document.getElementById('sound-off-icon')
         };
 
-        // Verbinding opstarten
         async function init() {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -196,19 +185,15 @@
             }
         }
 
-        // Spel aanmaken
         async function createGame() {
             playerName = elements.playerNameInput.value.trim();
             if (!playerName) { elements.startError.textContent = "Vul je naam in."; return; }
             if (!userId) return;
-
             elements.createGameBtn.disabled = true;
             isQuizmaster = true;
-            
             try {
                 gameId = Math.floor(100000 + Math.random() * 900000).toString();
                 const gameRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
-                
                 await setDoc(gameRef, {
                     quizmasterId: userId,
                     currentRoundIndex: -1,
@@ -217,7 +202,6 @@
                     isRevealingAnswers: false,
                     createdAt: new Date()
                 });
-
                 await setupPlayer();
                 startListeners();
             } catch (err) {
@@ -226,12 +210,10 @@
             }
         }
 
-        // Deelnemen
         async function joinGame() {
             playerName = elements.playerNameInput.value.trim();
             gameId = elements.gameIdInput.value.trim();
             if (!playerName || !gameId) { elements.startError.textContent = "Naam en Code verplicht."; return; }
-            
             elements.joinGameBtn.disabled = true;
             try {
                 const gameSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId));
@@ -264,15 +246,12 @@
             elements.startScreen.classList.add('hidden');
             elements.quizContainer.classList.remove('hidden');
             elements.gameIdDisplay.textContent = gameId;
-
             if (!isQuizmaster) document.getElementById('game-id-container').style.display = 'none';
-
             unsubscribeGame = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), (snap) => {
                 const state = snap.data();
                 if (!state) return;
                 const oldState = currentGameState;
                 currentGameState = state;
-                
                 if (state.currentRoundIndex !== oldState.currentRoundIndex || state.currentQuestionIndex !== oldState.currentQuestionIndex) {
                     renderUI();
                 }
@@ -280,7 +259,6 @@
                     revealAnswers();
                 }
             });
-
             unsubscribePlayers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'games', gameId, 'players'), (snap) => {
                 const players = [];
                 snap.forEach(d => players.push({id: d.id, ...d.data()}));
@@ -290,18 +268,15 @@
 
         function renderUI() {
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
-            
-            // Reset scherm
             elements.answerButtons.innerHTML = '';
             elements.answerFeedback.textContent = '';
             elements.nextBtn.classList.add('hidden');
             elements.roundName.textContent = '';
             playerAnsweredIndex = null;
-            clearInterval(timerInterval);
+            stopSound(); // Stop geluid als we wisselen van vraag/scherm
 
-            // Hoofd Lobby
             if (currentRoundIndex === -1) {
-                elements.questionText.textContent = isQuizmaster ? "Klaar om te beginnen? Deel de code!" : "Wachten tot de quizmaster start...";
+                elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten tot de quizmaster start...";
                 if (isQuizmaster) { 
                     elements.nextBtn.textContent = "Start Quiz"; 
                     elements.nextBtn.classList.remove('hidden'); 
@@ -309,7 +284,6 @@
                 return;
             }
 
-            // Einde Quiz
             if (currentRoundIndex >= rounds.length) {
                 showFinal();
                 return;
@@ -318,7 +292,6 @@
             const round = rounds[currentRoundIndex];
             elements.roundName.textContent = `Ronde: ${round.name}`;
 
-            // Ronde Lobby (tussenrondes)
             if (currentQuestionIndex === -1) {
                 if (isQuizmaster) {
                     elements.questionText.textContent = "Klaar voor de volgende ronde?";
@@ -330,7 +303,6 @@
                 return;
             }
 
-            // Vraag weergave
             const q = round.questions[currentQuestionIndex];
             displayQuestion(q, round.questions.length);
         }
@@ -348,10 +320,10 @@
                 
                 if (!isQuizmaster) {
                     button.addEventListener('click', () => {
-                        if (playerAnsweredIndex !== null) return;
+                        // Deelnemers kunnen nu wisselen zolang de timer loopt
                         playerAnsweredIndex = index;
+                        Array.from(elements.answerButtons.children).forEach(b => b.classList.remove('selected'));
                         button.classList.add('selected');
-                        Array.from(elements.answerButtons.children).forEach(b => b.classList.add('disabled-btn'));
                     });
                 } else {
                     button.classList.add('disabled-btn');
@@ -363,10 +335,12 @@
 
         function revealAnswers() {
             clearInterval(timerInterval);
+            stopSound();
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             const q = rounds[currentRoundIndex].questions[currentQuestionIndex];
             const correctAnswerIndex = q.correctAnswerIndex;
             
+            // Score verwerken (alleen spelers) op basis van de LAATSTE keuze
             if (!isQuizmaster && playerAnsweredIndex === correctAnswerIndex) {
                 const pRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId, 'players', playerDocId);
                 getDoc(pRef).then(s => updateDoc(pRef, { score: (s.data().score || 0) + 1 }));
@@ -400,17 +374,9 @@
         async function advance() {
             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
             const { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers } = currentGameState;
-
-            if (currentRoundIndex === -1) {
-                return updateDoc(ref, { currentRoundIndex: 0, currentQuestionIndex: -1 });
-            }
-            if (currentQuestionIndex === -1) {
-                return updateDoc(ref, { currentQuestionIndex: 0, isRevealingAnswers: false });
-            }
-            if (!isRevealingAnswers) {
-                return updateDoc(ref, { isRevealingAnswers: true });
-            }
-
+            if (currentRoundIndex === -1) return updateDoc(ref, { currentRoundIndex: 0, currentQuestionIndex: -1 });
+            if (currentQuestionIndex === -1) return updateDoc(ref, { currentQuestionIndex: 0, isRevealingAnswers: false });
+            if (!isRevealingAnswers) return updateDoc(ref, { isRevealingAnswers: true });
             if (currentQuestionIndex < rounds[currentRoundIndex].questions.length - 1) {
                 updateDoc(ref, { currentQuestionIndex: currentQuestionIndex + 1, isRevealingAnswers: false });
             } else {
@@ -422,15 +388,29 @@
             let time = QUESTION_TIME;
             elements.timerBar.style.width = '100%';
             elements.timerBar.classList.replace('bg-red-500', 'bg-indigo-500');
+            playSound();
             timerInterval = setInterval(() => {
                 time--;
                 elements.timerBar.style.width = `${(time/QUESTION_TIME)*100}%`;
                 if(time < 5) elements.timerBar.classList.replace('bg-indigo-500', 'bg-red-500');
                 if (time <= 0) {
                     clearInterval(timerInterval);
+                    stopSound();
                     if (isQuizmaster) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), { isRevealingAnswers: true });
                 }
             }, 1000);
+        }
+
+        function playSound() {
+            if (isSoundEnabled) {
+                elements.timerAudio.currentTime = 0;
+                elements.timerAudio.play().catch(e => console.log("Sound play blocked by browser."));
+            }
+        }
+
+        function stopSound() {
+            elements.timerAudio.pause();
+            elements.timerAudio.currentTime = 0;
         }
 
         function updateScoreboard(players) {
@@ -438,8 +418,8 @@
             const list = players.filter(p => !p.isQuizmaster).sort((a,b) => b.score - a.score);
             list.forEach(p => {
                 const d = document.createElement('div');
-                d.className = `flex justify-between p-3 rounded-xl shadow-sm border ${p.authId === userId ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'}`;
-                d.innerHTML = `<span class="font-medium text-slate-700">${p.name}</span><span class="font-bold text-indigo-600">${p.score}</span>`;
+                d.className = `flex justify-between p-3 rounded-xl shadow-sm border ${p.authId === userId ? 'bg-indigo-50 border-indigo-200 font-bold' : 'bg-white border-slate-100'}`;
+                d.innerHTML = `<span>${p.name}</span><span class="text-indigo-600">${p.score}</span>`;
                 elements.scoreboard.appendChild(d);
             });
         }
@@ -451,6 +431,14 @@
             const winnerName = list.length > 0 ? list[0].firstChild.textContent : "";
             elements.scoreFeedback.innerHTML = winnerName ? `🏆 De winnaar is: <strong class="text-indigo-600">${winnerName}</strong>` : "De quiz is afgelopen!";
         }
+
+        // Sound toggle event
+        elements.soundToggleBtn.onclick = () => {
+            isSoundEnabled = !isSoundEnabled;
+            elements.soundOnIcon.classList.toggle('hidden', !isSoundEnabled);
+            elements.soundOffIcon.classList.toggle('hidden', isSoundEnabled);
+            if (!isSoundEnabled) stopSound();
+        };
 
         elements.createGameBtn.onclick = createGame;
         elements.joinGameBtn.onclick = joinGame;
