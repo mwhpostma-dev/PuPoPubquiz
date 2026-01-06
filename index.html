@@ -212,37 +212,43 @@
             }
         }
 
-        // Genereer een hartslag geluid (lub-dub)
-        function playHeartbeat() {
+        // --- VERBETERDE REALISTISCHE HARTSLAG ---
+        function playRealisticHeartbeat() {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            const playThump = (freq, time, volume) => {
+            // Filter om het geluid doffer en "vleziger" te maken
+            const lowpass = audioCtx.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.setValueAtTime(120, audioCtx.currentTime);
+            lowpass.connect(audioCtx.destination);
+
+            const playPulse = (freq, startTime, duration, volume) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
 
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + time);
-                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + time + 0.1);
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+                // Snelle drop in frequentie voor de "thump"
+                osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + startTime + duration);
 
-                gain.gain.setValueAtTime(volume, audioCtx.currentTime + time);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + time + 0.1);
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime + startTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startTime + duration);
 
                 osc.connect(gain);
-                gain.connect(audioCtx.destination);
+                gain.connect(lowpass);
 
-                osc.start(audioCtx.currentTime + time);
-                osc.stop(audioCtx.currentTime + time + 0.1);
+                osc.start(audioCtx.currentTime + startTime);
+                osc.stop(audioCtx.currentTime + startTime + duration);
             };
 
-            // Eerste slag (lub)
-            playThump(60, 0, 0.3);
-            // Tweede slag (dub) kort erna
-            playThump(50, 0.15, 0.2);
+            // "Lub-Dub" ritme
+            playPulse(60, 0, 0.15, 0.4);      // Lub (iets luider en langer)
+            playPulse(55, 0.2, 0.1, 0.25);    // Dub (iets zachter en korter)
         }
 
-        // Genereer een zoemer geluid
+        // Zoemer geluid
         function playBuzzer() {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -360,6 +366,7 @@
         function renderUI() {
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             
+            // Harde reset van de weergave
             elements.answerButtons.innerHTML = '';
             elements.answerFeedback.textContent = '';
             elements.nextBtn.classList.add('hidden');
@@ -395,6 +402,7 @@
                 return;
             }
 
+            // Geforceerde leegmaak-actie voor browsers
             setTimeout(() => {
                 const q = round.questions[currentQuestionIndex];
                 displayQuestion(q, round.questions.length);
@@ -484,8 +492,7 @@
             elements.timerBar.style.width = '100%';
             elements.timerBar.classList.replace('bg-red-500', 'bg-indigo-500');
             
-            // Start hartslag direct bij start
-            playHeartbeat();
+            playRealisticHeartbeat();
 
             timerInterval = setInterval(() => {
                 time--;
@@ -493,9 +500,9 @@
                 if(time < 5) elements.timerBar.classList.replace('bg-indigo-500', 'bg-red-500');
                 
                 if (time > 0) {
-                    playHeartbeat();
+                    playRealisticHeartbeat();
                 } else if (time === 0) {
-                    playBuzzer(); // Tijd is om!
+                    playBuzzer();
                     clearInterval(timerInterval);
                     if (isQuizmaster) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), { isRevealingAnswers: true });
                 }
