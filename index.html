@@ -212,13 +212,13 @@
             }
         }
 
-        // --- VERBETERDE REALISTISCHE HARTSLAG ---
+        // --- VERBETERDE REALISTISCHE HARTSLAG (HARDER VOLUME) ---
         function playRealisticHeartbeat() {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            // Filter om het geluid doffer en "vleziger" te maken
+            // Filter om het geluid doffer te maken
             const lowpass = audioCtx.createBiquadFilter();
             lowpass.type = 'lowpass';
             lowpass.frequency.setValueAtTime(120, audioCtx.currentTime);
@@ -230,9 +230,9 @@
 
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
-                // Snelle drop in frequentie voor de "thump"
                 osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + startTime + duration);
 
+                // Volume verhoogd (maximaal 1.0 om vervorming te voorkomen)
                 gain.gain.setValueAtTime(volume, audioCtx.currentTime + startTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startTime + duration);
 
@@ -243,12 +243,12 @@
                 osc.stop(audioCtx.currentTime + startTime + duration);
             };
 
-            // "Lub-Dub" ritme
-            playPulse(60, 0, 0.15, 0.4);      // Lub (iets luider en langer)
-            playPulse(55, 0.2, 0.1, 0.25);    // Dub (iets zachter en korter)
+            // "Lub-Dub" ritme met verhoogd volume
+            playPulse(60, 0, 0.15, 0.9);      // Lub (Harder)
+            playPulse(55, 0.2, 0.1, 0.7);     // Dub (Harder)
         }
 
-        // Zoemer geluid
+        // Zoemer geluid (Harder volume)
         function playBuzzer() {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -265,7 +265,7 @@
             osc2.frequency.setValueAtTime(103, audioCtx.currentTime);
 
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.05);
+            gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05); // Volume verhoogd
             gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
 
             osc1.connect(gain);
@@ -366,7 +366,6 @@
         function renderUI() {
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             
-            // Harde reset van de weergave
             elements.answerButtons.innerHTML = '';
             elements.answerFeedback.textContent = '';
             elements.nextBtn.classList.add('hidden');
@@ -402,7 +401,6 @@
                 return;
             }
 
-            // Geforceerde leegmaak-actie voor browsers
             setTimeout(() => {
                 const q = round.questions[currentQuestionIndex];
                 displayQuestion(q, round.questions.length);
