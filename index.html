@@ -20,9 +20,8 @@
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex items-center justify-center min-h-screen p-4">
 
-    <!-- Audio Element voor de timer (tikkend geluid) -->
-    <!-- Gebruik een publiek domein geluid van een stabiele bron -->
-    <audio id="timer-audio" src="https://actions.google.com/sounds/v1/clocks/ticking_clock_fast.ogg" preload="auto" loop></audio>
+    <!-- Audio Element voor de timer (tikkend geluid) - Gebruik MP3 voor maximale compatibiliteit -->
+    <audio id="timer-audio" src="https://www.soundjay.com/misc/sounds/clock-ticking-2.mp3" preload="auto" loop></audio>
 
     <!-- Geluidsknop rechtsboven -->
     <div class="fixed top-4 right-4 z-50">
@@ -188,16 +187,22 @@
             }
         }
 
-        // Functie om audio te "unlocken" voor browsers
+        // Verbeterde functie om audio te "unlocken"
         function unlockAudio() {
-            elements.timerAudio.play().then(() => {
-                elements.timerAudio.pause();
-                elements.timerAudio.currentTime = 0;
-            }).catch(e => console.log("Audio unlock failed:", e));
+            elements.timerAudio.volume = 0.5; // Zet volume op 50%
+            const playPromise = elements.timerAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    elements.timerAudio.pause();
+                    elements.timerAudio.currentTime = 0;
+                }).catch(e => {
+                    console.log("Audio unlock interactie nodig.", e);
+                });
+            }
         }
 
         async function createGame() {
-            unlockAudio(); // Browser interactie vastleggen voor geluid
+            unlockAudio(); 
             playerName = elements.playerNameInput.value.trim();
             if (!playerName) { elements.startError.textContent = "Vul je naam in."; return; }
             if (!userId) return;
@@ -223,7 +228,7 @@
         }
 
         async function joinGame() {
-            unlockAudio(); // Browser interactie vastleggen voor geluid
+            unlockAudio();
             playerName = elements.playerNameInput.value.trim();
             gameId = elements.gameIdInput.value.trim();
             if (!playerName || !gameId) { elements.startError.textContent = "Naam en Code verplicht."; return; }
@@ -333,7 +338,6 @@
                 
                 if (!isQuizmaster) {
                     button.addEventListener('click', () => {
-                        // Deelnemers kunnen nu wisselen zolang de timer loopt
                         playerAnsweredIndex = index;
                         Array.from(elements.answerButtons.children).forEach(b => b.classList.remove('selected'));
                         button.classList.add('selected');
@@ -419,7 +423,7 @@
                 const playPromise = elements.timerAudio.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        console.log("Afspelen geblokkeerd. Gebruiker moet eerst klikken.", error);
+                        console.log("Geluid kon niet afspelen:", error);
                     });
                 }
             }
@@ -454,7 +458,7 @@
             elements.soundOnIcon.classList.toggle('hidden', !isSoundEnabled);
             elements.soundOffIcon.classList.toggle('hidden', isSoundEnabled);
             if (!isSoundEnabled) stopSound();
-            else unlockAudio(); // Probeer te unlocken als ze het aanzetten
+            else unlockAudio(); 
         };
 
         elements.createGameBtn.onclick = createGame;
