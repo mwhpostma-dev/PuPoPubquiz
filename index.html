@@ -11,7 +11,7 @@
         .answer-btn { 
             transition: all 0.2s ease-in-out; 
             outline: none !important; 
-            -webkit-tap-highlight-color: transparent; /* Voorkomt blauwe highlight op mobiel */
+            -webkit-tap-highlight-color: transparent;
         }
         .answer-btn:focus { box-shadow: none !important; outline: none !important; }
         .correct { background-color: #22c55e !important; color: white !important; border: 2px solid white; transform: scale(1.05); }
@@ -22,15 +22,11 @@
         .spinner { border: 3px solid rgba(0,0,0,.1); border-radius: 50%; border-top-color: #6366f1; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
-        /* Animatie voor soepele overgang tussen vragen */
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex items-center justify-center min-h-screen p-4">
-
-    <!-- Audio Element voor de timer (tikkend geluid) -->
-    <audio id="timer-audio" src="https://www.soundjay.com/misc/sounds/clock-ticking-2.mp3" preload="auto" loop></audio>
 
     <!-- Geluidsknop rechtsboven -->
     <div class="fixed top-4 right-4 z-50">
@@ -68,9 +64,9 @@
     <div id="quiz-container" class="hidden w-full max-w-4xl bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-6 md:p-8 text-center border-t-4 border-indigo-600">
         <div class="flex flex-col md:flex-row gap-8">
             <div class="w-full md:w-2/3">
-                <div class="flex items-center gap-4 mb-4">
+                <div class="flex items-center gap-4 mb-4 text-left">
                     <img src="PuPo logo.png" alt="PuPo" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
-                    <div class="flex-1 text-left">
+                    <div class="flex-1">
                         <div class="flex justify-between items-center mb-1">
                             <p class="font-semibold text-indigo-600 dark:text-indigo-400">Vraag <span id="question-number">1</span>/<span id="total-questions">10</span></p>
                             <div id="game-id-container" class="text-xs bg-indigo-50 dark:bg-indigo-900/40 px-3 py-1 rounded-full">Code: <strong id="game-id-display"></strong></div>
@@ -165,6 +161,7 @@
         let db, auth, userId, playerName, gameId, isQuizmaster = false, playerDocId, playerAnsweredIndex = null;
         let currentGameState = {}, timerInterval, unsubscribeGame, unsubscribePlayers;
         let isSoundEnabled = true;
+        let audioCtx = null;
         const QUESTION_TIME = 20;
 
         const elements = {
@@ -190,7 +187,6 @@
             answerFeedback: document.getElementById('answer-feedback'),
             loadingArea: document.getElementById('loading-area'),
             inputArea: document.getElementById('input-area'),
-            timerAudio: document.getElementById('timer-audio'),
             soundToggleBtn: document.getElementById('toggle-sound-btn'),
             soundOnIcon: document.getElementById('sound-on-icon'),
             soundOffIcon: document.getElementById('sound-off-icon')
@@ -216,19 +212,34 @@
             }
         }
 
-        function unlockAudio() {
-            elements.timerAudio.volume = 0.5;
-            const playPromise = elements.timerAudio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    elements.timerAudio.pause();
-                    elements.timerAudio.currentTime = 0;
-                }).catch(e => console.log("Audio interactie nodig."));
-            }
+        // SLIMME OPLOSSING: Genereer zelf een tikkend geluid via Web Audio
+        function playSyntheticTick() {
+            if (!isSoundEnabled) return;
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            // Simuleer een tikje: hoge frequentie naar laag in korte tijd
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
         }
 
         async function createGame() {
-            unlockAudio();
+            // Activeer audio context bij eerste klik
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
             playerName = elements.playerNameInput.value.trim();
             if (!playerName) { elements.startError.textContent = "Vul je naam in."; return; }
             if (!userId) return;
@@ -254,7 +265,8 @@
         }
 
         async function joinGame() {
-            unlockAudio();
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
             playerName = elements.playerNameInput.value.trim();
             gameId = elements.gameIdInput.value.trim();
             if (!playerName || !gameId) { elements.startError.textContent = "Naam en Code verplicht."; return; }
@@ -315,17 +327,15 @@
         function renderUI() {
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             
-            // VOLLEDIGE RESET VAN UI STATUS
             elements.answerButtons.innerHTML = '';
             elements.answerFeedback.textContent = '';
             elements.nextBtn.classList.add('hidden');
             elements.roundName.textContent = '';
             playerAnsweredIndex = null;
-            stopSound();
             clearInterval(timerInterval);
 
             if (currentRoundIndex === -1) {
-                elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten tot de quizmaster start...";
+                elements.questionText.textContent = isQuizmaster ? "Klaar om te beginnen? Deel de code!" : "Wachten tot de quizmaster start...";
                 if (isQuizmaster) { 
                     elements.nextBtn.textContent = "Start Quiz"; 
                     elements.nextBtn.classList.remove('hidden'); 
@@ -352,8 +362,7 @@
                 return;
             }
 
-            // Gebruik een langere vertraging om browser "geheugen" van knoppen écht te wissen
-            // Dit zorgt voor een korte 'leegte' die visuele resten verwijdert
+            // Geforceerde UI verversing om voorselectie bug te voorkomen
             setTimeout(() => {
                 const q = round.questions[currentQuestionIndex];
                 displayQuestion(q, round.questions.length);
@@ -361,7 +370,6 @@
         }
 
         function displayQuestion(question, totalInRound) {
-            // Zorg voor een schone start van de selectie
             playerAnsweredIndex = null;
             elements.answerButtons.innerHTML = ''; 
             
@@ -372,16 +380,13 @@
             question.answers.forEach((answer, index) => {
                 const button = document.createElement('button');
                 button.innerText = answer;
-                // Voeg fade-in klasse toe voor een visuele reset
                 button.className = 'answer-btn fade-in w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 p-4 rounded-xl text-lg font-medium shadow-sm hover:border-indigo-300 transition-all text-slate-800 dark:text-white';
                 
                 if (!isQuizmaster) {
                     button.onclick = () => {
                         playerAnsweredIndex = index;
-                        // Wis alle andere selecties visueel
                         Array.from(elements.answerButtons.children).forEach(b => b.classList.remove('selected'));
                         button.classList.add('selected');
-                        // Verwijder focus volledig
                         button.blur();
                     };
                 } else {
@@ -394,7 +399,6 @@
 
         function revealAnswers() {
             clearInterval(timerInterval);
-            stopSound();
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             const q = rounds[currentRoundIndex].questions[currentQuestionIndex];
             const correctAnswerIndex = q.correctAnswerIndex;
@@ -447,29 +451,23 @@
             let time = QUESTION_TIME;
             elements.timerBar.style.width = '100%';
             elements.timerBar.classList.replace('bg-red-500', 'bg-indigo-500');
-            playSound();
+            
+            // Tik direct af bij start
+            playSyntheticTick();
+
             timerInterval = setInterval(() => {
                 time--;
                 elements.timerBar.style.width = `${(time/QUESTION_TIME)*100}%`;
                 if(time < 5) elements.timerBar.classList.replace('bg-indigo-500', 'bg-red-500');
+                
+                // Tik af bij elke seconde
+                playSyntheticTick();
+
                 if (time <= 0) {
                     clearInterval(timerInterval);
-                    stopSound();
                     if (isQuizmaster) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), { isRevealingAnswers: true });
                 }
             }, 1000);
-        }
-
-        function playSound() {
-            if (isSoundEnabled) {
-                elements.timerAudio.currentTime = 0;
-                elements.timerAudio.play().catch(error => console.log("Geluid geblokkeerd door browser."));
-            }
-        }
-
-        function stopSound() {
-            elements.timerAudio.pause();
-            elements.timerAudio.currentTime = 0;
         }
 
         function updateScoreboard(players) {
@@ -495,8 +493,10 @@
             isSoundEnabled = !isSoundEnabled;
             elements.soundOnIcon.classList.toggle('hidden', !isSoundEnabled);
             elements.soundOffIcon.classList.toggle('hidden', isSoundEnabled);
-            if (!isSoundEnabled) stopSound();
-            else unlockAudio(); 
+            
+            if (isSoundEnabled && !audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
         };
 
         elements.createGameBtn.onclick = createGame;
