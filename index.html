@@ -81,9 +81,9 @@
 
                 <div id="question-area">
                     <h3 id="round-name" class="text-xl font-bold text-indigo-400 mb-2 uppercase tracking-widest text-left"></h3>
-                    <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center text-slate-800 dark:text-white">Wachten op de quizmaster...</h2>
+                    <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center text-slate-800 dark:text-white text-center">Wachten op de quizmaster...</h2>
                     <p id="answer-feedback" class="text-lg font-bold my-4 h-8"></p>
-                    <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center"></div>
                 </div>
 
                 <div class="mt-8 flex justify-center">
@@ -99,8 +99,8 @@
         
         <div id="score-screen" class="hidden py-10">
              <h2 class="text-4xl font-bold mb-4 text-indigo-600 dark:text-indigo-400 text-center">Quiz Voltooid!</h2>
-             <p id="score-feedback" class="text-2xl mb-8 text-center"></p>
-             <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg mx-auto block text-white text-white">Nieuw Spel Starten</button>
+             <p id="score-feedback" class="text-2xl mb-8 text-center text-slate-800 dark:text-white"></p>
+             <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg mx-auto block">Nieuw Spel Starten</button>
         </div>
     </div>
 
@@ -159,7 +159,7 @@
         ];
 
         let db, auth, userId, playerName, gameId, isQuizmaster = false, playerDocId, playerAnsweredIndex = null;
-        let currentGameState = {}, timerInterval, melodyInterval, unsubscribeGame, unsubscribePlayers;
+        let currentGameState = {}, timerInterval, unsubscribeGame, unsubscribePlayers;
         let isSoundEnabled = true;
         let audioCtx = null;
         const QUESTION_TIME = 20;
@@ -192,14 +192,6 @@
             soundOffIcon: document.getElementById('sound-off-icon')
         };
 
-        // Marco Borsato - Ik leef niet meer voor jou (Refrein Melodie Frequenties)
-        const melody = [
-            392.00, 392.00, 392.00, 392.00, 349.23, 329.63, 293.66, 0,      // Ik leef niet meer voor jou
-            392.00, 392.00, 392.00, 392.00, 349.23, 329.63, 293.66, 0,      // Ik kijk niet meer om
-            440.00, 440.00, 440.00, 440.00, 392.00, 349.23, 392.00, 0,      // Mijn hart is weer van mij
-            493.88, 493.88, 493.88, 493.88, 440.00, 392.00, 349.23, 0       // En ik ben weer vrij
-        ];
-
         async function init() {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -220,8 +212,8 @@
             }
         }
 
-        // Genereer synthesizer-noten voor de melodie
-        function playNote(freq) {
+        // Genereer een tikkend geluid
+        function playTick() {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -229,17 +221,48 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
-            osc.type = 'triangle'; // Zachtere klank dan 'sine' of 'sawtooth'
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
 
             osc.connect(gain);
             gain.connect(audioCtx.destination);
 
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.4);
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // Genereer een zoemer geluid
+        function playBuzzer() {
+            if (!isSoundEnabled) return;
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(100, audioCtx.currentTime);
+            
+            osc2.type = 'sawtooth';
+            osc2.frequency.setValueAtTime(103, audioCtx.currentTime); // Kleine detune voor 'dirty' effect
+
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.05);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc1.start();
+            osc2.start();
+            osc1.stop(audioCtx.currentTime + 0.8);
+            osc2.stop(audioCtx.currentTime + 0.8);
         }
 
         async function createGame() {
@@ -335,9 +358,7 @@
             elements.nextBtn.classList.add('hidden');
             elements.roundName.textContent = '';
             playerAnsweredIndex = null;
-            stopSound();
             clearInterval(timerInterval);
-            clearInterval(melodyInterval);
 
             if (currentRoundIndex === -1) {
                 elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten tot de quizmaster start...";
@@ -403,8 +424,6 @@
 
         function revealAnswers() {
             clearInterval(timerInterval);
-            clearInterval(melodyInterval);
-            stopSound();
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             const q = rounds[currentRoundIndex].questions[currentQuestionIndex];
             const correctAnswerIndex = q.correctAnswerIndex;
@@ -427,10 +446,10 @@
             if (!isQuizmaster) {
                 if (playerAnsweredIndex === correctAnswerIndex) {
                     elements.answerFeedback.textContent = "Goed gedaan! +1 punt";
-                    elements.answerFeedback.className = "text-lg font-bold my-4 text-green-500";
+                    elements.answerFeedback.className = "text-lg font-bold my-4 text-green-500 text-center";
                 } else {
                     elements.answerFeedback.textContent = playerAnsweredIndex === null ? "Helaas, je was te laat!" : "Helaas, fout!";
-                    elements.answerFeedback.className = "text-lg font-bold my-4 text-red-500";
+                    elements.answerFeedback.className = "text-lg font-bold my-4 text-red-500 text-center";
                 }
             }
 
@@ -458,31 +477,22 @@
             elements.timerBar.style.width = '100%';
             elements.timerBar.classList.replace('bg-red-500', 'bg-indigo-500');
             
-            // Melodie-sequencer starten
-            let noteIdx = 0;
-            melodyInterval = setInterval(() => {
-                if (isSoundEnabled) {
-                    const freq = melody[noteIdx % melody.length];
-                    if (freq > 0) playNote(freq);
-                    noteIdx++;
-                }
-            }, 400); // 400ms tempo
+            // Tik direct af bij start
+            playTick();
 
-            // Visual timer interval
             timerInterval = setInterval(() => {
                 time--;
                 elements.timerBar.style.width = `${(time/QUESTION_TIME)*100}%`;
                 if(time < 5) elements.timerBar.classList.replace('bg-indigo-500', 'bg-red-500');
-                if (time <= 0) {
+                
+                if (time > 0) {
+                    playTick();
+                } else if (time === 0) {
+                    playBuzzer(); // Tijd is om!
                     clearInterval(timerInterval);
-                    clearInterval(melodyInterval);
                     if (isQuizmaster) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), { isRevealingAnswers: true });
                 }
             }, 1000);
-        }
-
-        function stopSound() {
-            clearInterval(melodyInterval);
         }
 
         function updateScoreboard(players) {
