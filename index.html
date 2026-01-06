@@ -65,7 +65,7 @@
 
                 <div id="question-area">
                     <h3 id="round-name" class="text-xl font-bold text-indigo-400 mb-2 uppercase tracking-widest"></h3>
-                    <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center">Wachten op de quizmaster...</h2>
+                    <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center text-slate-800 dark:text-white">Wachten op de quizmaster...</h2>
                     <p id="answer-feedback" class="text-lg font-bold my-4 h-8"></p>
                     <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
@@ -86,7 +86,7 @@
         <div id="score-screen" class="hidden py-10">
              <h2 class="text-4xl font-bold mb-4 text-indigo-600 dark:text-indigo-400 text-center">Quiz Voltooid!</h2>
              <p id="score-feedback" class="text-2xl mb-8 text-center"></p>
-             <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg mx-auto block">Nieuw Spel Starten</button>
+             <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg mx-auto block text-white">Nieuw Spel Starten</button>
         </div>
     </div>
 
@@ -107,7 +107,7 @@
 
         const appId = 'pupo-pub-quiz-2026';
 
-        // --- VRAGEN (Uit jouw index.html) ---
+        // --- VRAGEN ---
         const quizRounds = [
             {
                 name: "Algemeen",
@@ -290,14 +290,18 @@
 
         function renderUI() {
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
+            
+            // Reset scherm
             elements.answerButtons.innerHTML = '';
             elements.answerFeedback.textContent = '';
             elements.nextBtn.classList.add('hidden');
+            elements.roundName.textContent = '';
             playerAnsweredIndex = null;
             clearInterval(timerInterval);
 
+            // Hoofd Lobby
             if (currentRoundIndex === -1) {
-                elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten op de start...";
+                elements.questionText.textContent = isQuizmaster ? "Klaar om te beginnen? Deel de code!" : "Wachten tot de quizmaster start...";
                 if (isQuizmaster) { 
                     elements.nextBtn.textContent = "Start Quiz"; 
                     elements.nextBtn.classList.remove('hidden'); 
@@ -305,6 +309,7 @@
                 return;
             }
 
+            // Einde Quiz
             if (currentRoundIndex >= rounds.length) {
                 showFinal();
                 return;
@@ -313,35 +318,45 @@
             const round = rounds[currentRoundIndex];
             elements.roundName.textContent = `Ronde: ${round.name}`;
 
+            // Ronde Lobby (tussenrondes)
             if (currentQuestionIndex === -1) {
-                elements.questionText.textContent = isQuizmaster ? `Ronde: ${round.name}` : `Bereid je voor op ${round.name}...`;
-                if (isQuizmaster) { 
-                    elements.nextBtn.textContent = "Start Ronde"; 
-                    elements.nextBtn.classList.remove('hidden'); 
+                if (isQuizmaster) {
+                    elements.questionText.textContent = "Klaar voor de volgende ronde?";
+                    elements.nextBtn.textContent = "Start Ronde";
+                    elements.nextBtn.classList.remove('hidden');
+                } else {
+                    elements.questionText.textContent = "De quizmaster gaat de ronde bijna starten...";
                 }
                 return;
             }
 
+            // Vraag weergave
             const q = round.questions[currentQuestionIndex];
-            elements.questionText.textContent = q.question;
-            elements.questionNumber.textContent = currentQuestionIndex + 1;
-            elements.totalQuestions.textContent = round.questions.length;
+            displayQuestion(q, round.questions.length);
+        }
 
-            q.answers.forEach((ans, idx) => {
-                const btn = document.createElement('button');
-                btn.innerText = ans;
-                btn.className = 'answer-btn w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 p-4 rounded-xl text-lg font-medium shadow-sm hover:border-indigo-300 transition-all';
+        function displayQuestion(question, totalInRound) {
+            elements.questionText.textContent = question.question;
+            elements.questionNumber.textContent = currentGameState.currentQuestionIndex + 1;
+            elements.totalQuestions.textContent = totalInRound;
+
+            question.answers.forEach((answer, index) => {
+                const button = document.createElement('button');
+                button.innerText = answer;
+                button.className = 'answer-btn w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 p-4 rounded-xl text-lg font-medium shadow-sm hover:border-indigo-300 transition-all text-slate-800 dark:text-white';
+                button.dataset.index = index;
+                
                 if (!isQuizmaster) {
-                    btn.onclick = () => {
+                    button.addEventListener('click', () => {
                         if (playerAnsweredIndex !== null) return;
-                        playerAnsweredIndex = idx;
-                        btn.classList.add('selected');
+                        playerAnsweredIndex = index;
+                        button.classList.add('selected');
                         Array.from(elements.answerButtons.children).forEach(b => b.classList.add('disabled-btn'));
-                    };
+                    });
                 } else {
-                    btn.classList.add('disabled-btn');
+                    button.classList.add('disabled-btn');
                 }
-                elements.answerButtons.appendChild(btn);
+                elements.answerButtons.appendChild(button);
             });
             startTimer();
         }
@@ -350,24 +365,24 @@
             clearInterval(timerInterval);
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             const q = rounds[currentRoundIndex].questions[currentQuestionIndex];
+            const correctAnswerIndex = q.correctAnswerIndex;
             
-            if (!isQuizmaster && playerAnsweredIndex === q.correctAnswerIndex) {
+            if (!isQuizmaster && playerAnsweredIndex === correctAnswerIndex) {
                 const pRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId, 'players', playerDocId);
                 getDoc(pRef).then(s => updateDoc(pRef, { score: (s.data().score || 0) + 1 }));
             }
 
             Array.from(elements.answerButtons.children).forEach((btn, i) => {
                 btn.classList.add('disabled-btn');
-                if (i === q.correctAnswerIndex) {
+                if (i === correctAnswerIndex) {
                     btn.classList.add('correct');
-                    btn.classList.remove('selected');
                 } else if (btn.classList.contains('selected')) {
                     btn.classList.add('incorrect');
                 }
             });
 
             if (!isQuizmaster) {
-                if (playerAnsweredIndex === q.correctAnswerIndex) {
+                if (playerAnsweredIndex === correctAnswerIndex) {
                     elements.answerFeedback.textContent = "Goed gedaan! +1 punt";
                     elements.answerFeedback.className = "text-lg font-bold my-4 text-green-500";
                 } else {
@@ -432,8 +447,9 @@
         function showFinal() {
             elements.questionText.parentElement.classList.add('hidden');
             elements.scoreScreen.classList.remove('hidden');
-            const winner = elements.scoreboard.firstChild?.firstChild?.textContent;
-            elements.scoreFeedback.innerHTML = winner ? `🏆 De winnaar is: <strong class="text-indigo-600">${winner}</strong>` : "De quiz is afgelopen!";
+            const list = Array.from(elements.scoreboard.querySelectorAll('div'));
+            const winnerName = list.length > 0 ? list[0].firstChild.textContent : "";
+            elements.scoreFeedback.innerHTML = winnerName ? `🏆 De winnaar is: <strong class="text-indigo-600">${winnerName}</strong>` : "De quiz is afgelopen!";
         }
 
         elements.createGameBtn.onclick = createGame;
