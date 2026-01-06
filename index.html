@@ -100,7 +100,7 @@
         <div id="score-screen" class="hidden py-10">
              <h2 class="text-4xl font-bold mb-4 text-indigo-600 dark:text-indigo-400 text-center">Quiz Voltooid!</h2>
              <p id="score-feedback" class="text-2xl mb-8 text-center"></p>
-             <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg mx-auto block text-white">Nieuw Spel Starten</button>
+             <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg mx-auto block text-white text-white">Nieuw Spel Starten</button>
         </div>
     </div>
 
@@ -159,7 +159,7 @@
         ];
 
         let db, auth, userId, playerName, gameId, isQuizmaster = false, playerDocId, playerAnsweredIndex = null;
-        let currentGameState = {}, timerInterval, unsubscribeGame, unsubscribePlayers;
+        let currentGameState = {}, timerInterval, melodyInterval, unsubscribeGame, unsubscribePlayers;
         let isSoundEnabled = true;
         let audioCtx = null;
         const QUESTION_TIME = 20;
@@ -192,6 +192,14 @@
             soundOffIcon: document.getElementById('sound-off-icon')
         };
 
+        // Marco Borsato - Ik leef niet meer voor jou (Refrein Melodie Frequenties)
+        const melody = [
+            392.00, 392.00, 392.00, 392.00, 349.23, 329.63, 293.66, 0,      // Ik leef niet meer voor jou
+            392.00, 392.00, 392.00, 392.00, 349.23, 329.63, 293.66, 0,      // Ik kijk niet meer om
+            440.00, 440.00, 440.00, 440.00, 392.00, 349.23, 392.00, 0,      // Mijn hart is weer van mij
+            493.88, 493.88, 493.88, 493.88, 440.00, 392.00, 349.23, 0       // En ik ben weer vrij
+        ];
+
         async function init() {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -212,8 +220,8 @@
             }
         }
 
-        // SLIMME OPLOSSING: Genereer zelf een tikkend geluid via Web Audio
-        function playSyntheticTick() {
+        // Genereer synthesizer-noten voor de melodie
+        function playNote(freq) {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -221,25 +229,21 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
-            osc.type = 'sine';
-            // Simuleer een tikje: hoge frequentie naar laag in korte tijd
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.type = 'triangle'; // Zachtere klank dan 'sine' of 'sawtooth'
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
 
             osc.connect(gain);
             gain.connect(audioCtx.destination);
 
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+            osc.stop(audioCtx.currentTime + 0.4);
         }
 
         async function createGame() {
-            // Activeer audio context bij eerste klik
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            
             playerName = elements.playerNameInput.value.trim();
             if (!playerName) { elements.startError.textContent = "Vul je naam in."; return; }
             if (!userId) return;
@@ -266,7 +270,6 @@
 
         async function joinGame() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
             playerName = elements.playerNameInput.value.trim();
             gameId = elements.gameIdInput.value.trim();
             if (!playerName || !gameId) { elements.startError.textContent = "Naam en Code verplicht."; return; }
@@ -332,10 +335,12 @@
             elements.nextBtn.classList.add('hidden');
             elements.roundName.textContent = '';
             playerAnsweredIndex = null;
+            stopSound();
             clearInterval(timerInterval);
+            clearInterval(melodyInterval);
 
             if (currentRoundIndex === -1) {
-                elements.questionText.textContent = isQuizmaster ? "Klaar om te beginnen? Deel de code!" : "Wachten tot de quizmaster start...";
+                elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten tot de quizmaster start...";
                 if (isQuizmaster) { 
                     elements.nextBtn.textContent = "Start Quiz"; 
                     elements.nextBtn.classList.remove('hidden'); 
@@ -362,7 +367,6 @@
                 return;
             }
 
-            // Geforceerde UI verversing om voorselectie bug te voorkomen
             setTimeout(() => {
                 const q = round.questions[currentQuestionIndex];
                 displayQuestion(q, round.questions.length);
@@ -399,6 +403,8 @@
 
         function revealAnswers() {
             clearInterval(timerInterval);
+            clearInterval(melodyInterval);
+            stopSound();
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             const q = rounds[currentRoundIndex].questions[currentQuestionIndex];
             const correctAnswerIndex = q.correctAnswerIndex;
@@ -410,7 +416,7 @@
 
             Array.from(elements.answerButtons.children).forEach((btn, i) => {
                 btn.classList.add('disabled-btn');
-                if (i === correctAnswerIndex) {
+                if (i === q.correctAnswerIndex) {
                     btn.classList.add('correct');
                     btn.classList.remove('selected');
                 } else if (btn.classList.contains('selected')) {
@@ -452,22 +458,31 @@
             elements.timerBar.style.width = '100%';
             elements.timerBar.classList.replace('bg-red-500', 'bg-indigo-500');
             
-            // Tik direct af bij start
-            playSyntheticTick();
+            // Melodie-sequencer starten
+            let noteIdx = 0;
+            melodyInterval = setInterval(() => {
+                if (isSoundEnabled) {
+                    const freq = melody[noteIdx % melody.length];
+                    if (freq > 0) playNote(freq);
+                    noteIdx++;
+                }
+            }, 400); // 400ms tempo
 
+            // Visual timer interval
             timerInterval = setInterval(() => {
                 time--;
                 elements.timerBar.style.width = `${(time/QUESTION_TIME)*100}%`;
                 if(time < 5) elements.timerBar.classList.replace('bg-indigo-500', 'bg-red-500');
-                
-                // Tik af bij elke seconde
-                playSyntheticTick();
-
                 if (time <= 0) {
                     clearInterval(timerInterval);
+                    clearInterval(melodyInterval);
                     if (isQuizmaster) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), { isRevealingAnswers: true });
                 }
             }, 1000);
+        }
+
+        function stopSound() {
+            clearInterval(melodyInterval);
         }
 
         function updateScoreboard(players) {
@@ -493,10 +508,7 @@
             isSoundEnabled = !isSoundEnabled;
             elements.soundOnIcon.classList.toggle('hidden', !isSoundEnabled);
             elements.soundOffIcon.classList.toggle('hidden', isSoundEnabled);
-            
-            if (isSoundEnabled && !audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
+            if (isSoundEnabled && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         };
 
         elements.createGameBtn.onclick = createGame;
