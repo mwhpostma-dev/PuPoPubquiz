@@ -8,10 +8,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .answer-btn { transition: all 0.2s ease-in-out; }
+        .answer-btn { transition: all 0.2s ease-in-out; outline: none !important; }
+        .answer-btn:focus { box-shadow: none !important; }
         .correct { background-color: #22c55e !important; color: white !important; border: 2px solid white; transform: scale(1.05); }
         .incorrect { background-color: #ef4444 !important; color: white !important; opacity: 0.7; }
-        .selected { background-color: #6366f1 !important; color: white !important; border: 2px solid white; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+        .selected { background-color: #6366f1 !important; color: white !important; border: 2px solid white; box-shadow: 0 0 15px rgba(99, 102, 241, 0.4) !important; }
         .disabled-btn { pointer-events: none; opacity: 0.6; }
         #timer-bar-inner { transition: width 1s linear; }
         .spinner { border: 3px solid rgba(0,0,0,.1); border-radius: 50%; border-top-color: #6366f1; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
@@ -20,7 +21,7 @@
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex items-center justify-center min-h-screen p-4">
 
-    <!-- Audio Element voor de timer (tikkend geluid) - Gebruik MP3 voor maximale compatibiliteit -->
+    <!-- Audio Element voor de timer (tikkend geluid) -->
     <audio id="timer-audio" src="https://www.soundjay.com/misc/sounds/clock-ticking-2.mp3" preload="auto" loop></audio>
 
     <!-- Geluidsknop rechtsboven -->
@@ -39,7 +40,7 @@
     <!-- Start Scherm -->
     <div id="start-screen" class="w-full max-w-md bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-8 text-center border-t-4 border-indigo-600">
         <img src="PuPo logo.png" alt="PuPo Logo" class="mx-auto mb-4 w-32 h-auto" onerror="this.style.display='none'">
-        <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-6">PuPo Familie Pubquiz 2026</h1>
+        <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-6 text-slate-800 dark:text-white">PuPo Familie Pubquiz 2026</h1>
         
         <div id="loading-area" class="mb-4 text-sm">
             <div class="spinner mr-2"></div> <span id="conn-status">Verbinding maken met database...</span>
@@ -71,22 +72,27 @@
                         </div>
                     </div>
                 </div>
+                
                 <hr class="border-slate-100 dark:border-slate-700 mb-6">
+
                 <div id="question-area">
                     <h3 id="round-name" class="text-xl font-bold text-indigo-400 mb-2 uppercase tracking-widest text-left"></h3>
                     <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center text-slate-800 dark:text-white">Wachten op de quizmaster...</h2>
                     <p id="answer-feedback" class="text-lg font-bold my-4 h-8"></p>
                     <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </div>
+
                 <div class="mt-8 flex justify-center">
                     <button id="next-btn" class="hidden bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg active:scale-95">Volgende Vraag</button>
                 </div>
             </div>
+
             <div class="w-full md:w-1/3 border-t-2 md:border-t-0 md:border-l-2 border-slate-100 dark:border-slate-700 pt-6 md:pt-0 md:pl-6 text-left">
                  <h3 class="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Tussenstand</h3>
                  <div id="scoreboard" class="space-y-3"></div>
             </div>
         </div>
+        
         <div id="score-screen" class="hidden py-10">
              <h2 class="text-4xl font-bold mb-4 text-indigo-600 dark:text-indigo-400 text-center">Quiz Voltooid!</h2>
              <p id="score-feedback" class="text-2xl mb-8 text-center"></p>
@@ -111,26 +117,41 @@
         const appId = 'pupo-pub-quiz-2026';
 
         const quizRounds = [
-            { name: "Algemeen", questions: [
-                { question: "Wat is de hoofdstad van Nederland?", answers: ["Amsterdam", "Rotterdam", "Den Haag", "Utrecht"], correctAnswerIndex: 0 },
-                { question: "Hoeveel provincies heeft Nederland?", answers: ["10", "11", "12", "13"], correctAnswerIndex: 2 }
-            ]},
-            { name: "Waar of niet waar?", questions: [
-                { question: "Een groep kraaien wordt ook wel een moord genoemd", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 },
-                { question: "Het Oktoberfest begint traditioneel in september", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 }
-            ]},
-            { name: "Sport", questions: [
-                { question: "Hoe vaak won Mighty Mike het WK?", answers: ["2", "3", "4", "0"], correctAnswerIndex: 1 },
-                { question: "Curaçao plaatste zich in November 2025 voor het WK voetbal. Wie is de bondscoach van dit team?", answers: ["Guus Hiddink", "Stanley Menzo", "Ruud Gullit", "Dick Advocaat"], correctAnswerIndex: 3 }
-            ]},
-            { name: "Muziek", questions: [
-                { question: "Wie wordt 'The King of Pop' genoemd?", answers: ["Elvis Presley", "Michael Jackson", "Freddie Mercury", "Elton John"], correctAnswerIndex: 1 },
-                { question: "Van welk land komt de band ABBA?", answers: ["Noorwegen", "Denemarken", "Finland", "Zweden"], correctAnswerIndex: 3 }
-            ]},
-            { name: "Familie", questions: [
-                { question: "Wat is de geboortemaand van de meeste mensen in onze familie?", answers: ["Januari", "Mei", "Augustus", "Oktober"], correctAnswerIndex: 2 },
-                { question: "Welk spel spelen we het vaakst op familieweekenden?", answers: ["Catan", "30 Seconds", "Monopoly", "Kaarten"], correctAnswerIndex: 1 }
-            ]}
+            {
+                name: "Algemeen",
+                questions: [
+                    { question: "Wat is de hoofdstad van Nederland?", answers: ["Amsterdam", "Rotterdam", "Den Haag", "Utrecht"], correctAnswerIndex: 0 },
+                    { question: "Hoeveel provincies heeft Nederland?", answers: ["10", "11", "12", "13"], correctAnswerIndex: 2 }
+                ]
+            },
+            {
+                name: "Waar of niet waar?",
+                questions: [
+                    { question: "Een groep kraaien wordt ook wel een moord genoemd", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 },
+                    { question: "Het Oktoberfest begint traditioneel in september", answers: ["Waar", "Niet waar"], correctAnswerIndex: 0 }
+                ]
+            },
+            {
+                name: "Sport",
+                questions: [
+                    { question: "Hoe vaak won Mighty Mike het WK?", answers: ["2", "3", "4", "0"], correctAnswerIndex: 1 },
+                    { question: "Curaçao plaatste zich in November 2025 voor het WK voetbal. Wie is de bondscoach van dit team?", answers: ["Guus Hiddink", "Stanley Menzo", "Ruud Gullit", "Dick Advocaat"], correctAnswerIndex: 3 }
+                ]
+            },
+            {
+                name: "Muziek",
+                questions: [
+                    { question: "Wie wordt 'The King of Pop' genoemd?", answers: ["Elvis Presley", "Michael Jackson", "Freddie Mercury", "Elton John"], correctAnswerIndex: 1 },
+                    { question: "Van welk land komt de band ABBA?", answers: ["Noorwegen", "Denemarken", "Finland", "Zweden"], correctAnswerIndex: 3 }
+                ]
+            },
+            {
+                name: "Familie",
+                questions: [
+                    { question: "Wat is de geboortemaand van de meeste mensen in onze familie?", answers: ["Januari", "Mei", "Augustus", "Oktober"], correctAnswerIndex: 2 },
+                    { question: "Welk spel spelen we het vaakst op familieweekenden?", answers: ["Catan", "30 Seconds", "Monopoly", "Kaarten"], correctAnswerIndex: 1 }
+                ]
+            }
         ];
 
         let db, auth, userId, playerName, gameId, isQuizmaster = false, playerDocId, playerAnsweredIndex = null;
@@ -187,22 +208,19 @@
             }
         }
 
-        // Verbeterde functie om audio te "unlocken"
         function unlockAudio() {
-            elements.timerAudio.volume = 0.5; // Zet volume op 50%
+            elements.timerAudio.volume = 0.5;
             const playPromise = elements.timerAudio.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     elements.timerAudio.pause();
                     elements.timerAudio.currentTime = 0;
-                }).catch(e => {
-                    console.log("Audio unlock interactie nodig.", e);
-                });
+                }).catch(e => console.log("Audio interactie nodig."));
             }
         }
 
         async function createGame() {
-            unlockAudio(); 
+            unlockAudio();
             playerName = elements.playerNameInput.value.trim();
             if (!playerName) { elements.startError.textContent = "Vul je naam in."; return; }
             if (!userId) return;
@@ -265,6 +283,7 @@
             elements.quizContainer.classList.remove('hidden');
             elements.gameIdDisplay.textContent = gameId;
             if (!isQuizmaster) document.getElementById('game-id-container').style.display = 'none';
+            
             unsubscribeGame = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), (snap) => {
                 const state = snap.data();
                 if (!state) return;
@@ -277,6 +296,7 @@
                     revealAnswers();
                 }
             });
+
             unsubscribePlayers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'games', gameId, 'players'), (snap) => {
                 const players = [];
                 snap.forEach(d => players.push({id: d.id, ...d.data()}));
@@ -286,15 +306,18 @@
 
         function renderUI() {
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
+            
+            // VOLLEDIGE RESET VAN UI STATUS
             elements.answerButtons.innerHTML = '';
             elements.answerFeedback.textContent = '';
             elements.nextBtn.classList.add('hidden');
             elements.roundName.textContent = '';
             playerAnsweredIndex = null;
             stopSound();
+            clearInterval(timerInterval);
 
             if (currentRoundIndex === -1) {
-                elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten tot de quizmaster start...";
+                elements.questionText.textContent = isQuizmaster ? "Klaar om te beginnen? Deel de code!" : "Wachten tot de quizmaster start...";
                 if (isQuizmaster) { 
                     elements.nextBtn.textContent = "Start Quiz"; 
                     elements.nextBtn.classList.remove('hidden'); 
@@ -321,27 +344,35 @@
                 return;
             }
 
-            const q = round.questions[currentQuestionIndex];
-            displayQuestion(q, round.questions.length);
+            // Gebruik een mini-vertraging om browser "geheugen" van knoppen te wissen
+            setTimeout(() => {
+                const q = round.questions[currentQuestionIndex];
+                displayQuestion(q, round.questions.length);
+            }, 10);
         }
 
         function displayQuestion(question, totalInRound) {
             elements.questionText.textContent = question.question;
             elements.questionNumber.textContent = currentGameState.currentQuestionIndex + 1;
             elements.totalQuestions.textContent = totalInRound;
+            
+            // Verzeker dat de index écht op null staat bij de start van een vraag
+            playerAnsweredIndex = null;
 
             question.answers.forEach((answer, index) => {
                 const button = document.createElement('button');
                 button.innerText = answer;
                 button.className = 'answer-btn w-full bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 p-4 rounded-xl text-lg font-medium shadow-sm hover:border-indigo-300 transition-all text-slate-800 dark:text-white';
-                button.dataset.index = index;
+                button.dataset.idx = index; // Gebruik dataset voor extra veiligheid
                 
                 if (!isQuizmaster) {
-                    button.addEventListener('click', () => {
+                    button.onclick = (e) => {
                         playerAnsweredIndex = index;
+                        // Wis alle andere selecties visueel
                         Array.from(elements.answerButtons.children).forEach(b => b.classList.remove('selected'));
                         button.classList.add('selected');
-                    });
+                        button.blur(); // Haal browser-focus weg
+                    };
                 } else {
                     button.classList.add('disabled-btn');
                 }
@@ -420,12 +451,7 @@
         function playSound() {
             if (isSoundEnabled) {
                 elements.timerAudio.currentTime = 0;
-                const playPromise = elements.timerAudio.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.log("Geluid kon niet afspelen:", error);
-                    });
-                }
+                elements.timerAudio.play().catch(error => console.log("Geluid geblokkeerd door browser."));
             }
         }
 
@@ -439,8 +465,8 @@
             const list = players.filter(p => !p.isQuizmaster).sort((a,b) => b.score - a.score);
             list.forEach(p => {
                 const d = document.createElement('div');
-                d.className = `flex justify-between p-3 rounded-xl shadow-sm border ${p.authId === userId ? 'bg-indigo-50 border-indigo-200 font-bold' : 'bg-white border-slate-100'}`;
-                d.innerHTML = `<span>${p.name}</span><span class="text-indigo-600">${p.score}</span>`;
+                d.className = `flex justify-between p-3 rounded-xl shadow-sm border ${p.authId === userId ? 'bg-indigo-50 border-indigo-200 font-bold' : 'bg-white border-slate-100 dark:bg-slate-700'}`;
+                d.innerHTML = `<span class="text-slate-700 dark:text-white">${p.name}</span><span class="text-indigo-600 font-bold">${p.score}</span>`;
                 elements.scoreboard.appendChild(d);
             });
         }
