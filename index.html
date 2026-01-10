@@ -63,7 +63,7 @@
     <!-- Quiz Container -->
     <div id="quiz-container" class="hidden w-full max-w-4xl bg-white dark:bg-slate-800 shadow-2xl rounded-2xl p-6 md:p-8 text-center border-t-4 border-indigo-600">
         <div class="flex flex-col md:flex-row gap-8">
-            <div class="w-full md:w-2/3">
+            <div class="w-full md:w-2/3 text-center">
                 <div class="flex items-center gap-4 mb-4 text-left">
                     <img src="PuPo logo.png" alt="PuPo" class="w-12 h-12 object-contain" onerror="this.style.display='none'">
                     <div class="flex-1">
@@ -81,7 +81,7 @@
 
                 <div id="question-area">
                     <h3 id="round-name" class="text-xl font-bold text-indigo-400 mb-2 uppercase tracking-widest text-left"></h3>
-                    <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center text-slate-800 dark:text-white text-center">Wachten op de quizmaster...</h2>
+                    <h2 id="question-text" class="text-2xl font-semibold mb-6 min-h-[100px] flex items-center justify-center text-slate-800 dark:text-white text-center px-4">Wachten op de quizmaster...</h2>
                     <p id="answer-feedback" class="text-lg font-bold my-4 h-8"></p>
                     <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center"></div>
                 </div>
@@ -177,7 +177,7 @@
                     { question: "Welk bekend liedje begint met de zin: 'When your legs don’t work like they used to be before'?", answers: ["Thinking out loud – Ed Sheeran", "Where is my husband – Raye", "Loser- Roxy Dekker", "12 to 12- Sombr"], correctAnswerIndex: 0 },
                     { question: "Wat is de naam van de speelgoed cowboy in Toy Story?", answers: ["Buzz Lightyear", "Woody", "Meneer Aardappelhoofd", "Rex"], correctAnswerIndex: 1 },
                     { question: "Welk bekend liedje begint met de zin: 'Loop in de stad, ‘k heb Buma in m’n zak'?", answers: ["Spijt is voor later – Martin Morero", "Gas erop! - Jannes", "Houden van haten – Mart Hoogkamer en Miss Montreal", "Roxy Dekker – Sugard daddy"], correctAnswerIndex: 3 },
-                    { question: "Wie speelde Captain America in de Marvel films?", answers: ["Heath Ledger", "Robert Downey Jr.", "Chris Evans", "Chris Hemsworth"], correctAnswerIndex: 2 },
+                    { question: "Wie speelt Captain America in de Marvel films?", answers: ["Heath Ledger", "Robert Downey Jr.", "Chris Evans", "Chris Hemsworth"], correctAnswerIndex: 2 },
                     { question: "Welk bekend liedje begint met de zin: 'Er is verrekte veel te zeggen, en te liegen nog veel meer'?", answers: ["Niemand – Suzan en Freek", "Oceaan – Racoon", "Jij bent hier – Stef Bosr", "Met of zonder jouw – Tino Martin"], correctAnswerIndex: 1 },
                     { question: "Deze tekst van een liedje is vertaald. Van welke artiest is deze tekst? Jij met die verdrietige ogen, wees niet ontmoedigd, Oh ik besef het, Het is moeilijk om moed te voelen, In een wereld vol mensen kun je alles uit het oog verliezen, En de duisternis in je kan je zo klein laten voelen.", answers: ["The Bangles", "Madonna", "Cyndy Lauper", "Kate Bush"], correctAnswerIndex: 2 },
                     { question: "Uit welke Disney-film komt het karakter Marshmallow?", answers: ["Mulan", "Lilo&Stitch", "Zootropolis", "Frozen"], correctAnswerIndex: 3 }
@@ -524,7 +524,6 @@
             }
         }
 
-        // Functie voor de test-knop: forceer antwoord onthulling
         async function skipToResults() {
             if (!isQuizmaster) return;
             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
@@ -557,9 +556,22 @@
             elements.scoreboard.innerHTML = '';
             const list = players.filter(p => !p.isQuizmaster).sort((a,b) => b.score - a.score);
             list.forEach(p => {
+                const isSelf = p.authId === userId;
                 const d = document.createElement('div');
-                d.className = `flex justify-between p-3 rounded-xl shadow-sm border ${p.authId === userId ? 'bg-indigo-50 border-indigo-200 font-bold' : 'bg-white border-slate-100 dark:bg-slate-700'}`;
-                d.innerHTML = `<span class="text-slate-700 dark:text-white">${p.name}</span><span class="text-indigo-600 font-bold">${p.score}</span>`;
+                // Verbeterde contrast en styling voor leesbaarheid op mobiel
+                d.className = `flex justify-between p-3 rounded-xl shadow-sm border transition-all ${
+                    isSelf 
+                    ? 'bg-indigo-100 border-indigo-300 ring-2 ring-indigo-200' 
+                    : 'bg-slate-50 border-slate-200 dark:bg-slate-700 dark:border-slate-600'
+                }`;
+                
+                const nameClass = isSelf ? 'text-indigo-900 font-bold' : 'text-slate-700 dark:text-slate-200';
+                const scoreClass = isSelf ? 'text-indigo-700 font-extrabold' : 'text-indigo-600 dark:text-indigo-400 font-bold';
+                
+                d.innerHTML = `
+                    <span class="${nameClass}">${p.name} ${isSelf ? '(Jij)' : ''}</span>
+                    <span class="${scoreClass}">${p.score}</span>
+                `;
                 elements.scoreboard.appendChild(d);
             });
         }
@@ -568,7 +580,7 @@
             elements.questionText.parentElement.classList.add('hidden');
             elements.scoreScreen.classList.remove('hidden');
             const list = Array.from(elements.scoreboard.querySelectorAll('div'));
-            const winnerName = list.length > 0 ? list[0].firstChild.textContent : "";
+            const winnerName = list.length > 0 ? list[0].querySelector('span').firstChild.textContent : "";
             elements.scoreFeedback.innerHTML = winnerName ? `🏆 De winnaar is: <strong class="text-indigo-600">${winnerName}</strong>` : "De quiz is afgelopen!";
         }
 
@@ -582,11 +594,10 @@
         elements.createGameBtn.onclick = createGame;
         elements.joinGameBtn.onclick = joinGame;
         elements.nextBtn.onclick = advance;
-        elements.skipBtn.onclick = skipToResults; // Koppel de skip knop
+        elements.skipBtn.onclick = skipToResults;
         elements.restartBtn.onclick = () => location.reload();
         
         init();
     </script>
 </body>
 </html>
-
