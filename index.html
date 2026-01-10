@@ -86,8 +86,10 @@
                     <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-center"></div>
                 </div>
 
-                <div class="mt-8 flex justify-center">
+                <div class="mt-8 flex flex-col items-center gap-4">
                     <button id="next-btn" class="hidden bg-indigo-600 text-white font-bold py-4 px-10 rounded-xl hover:bg-indigo-700 transition-all shadow-lg active:scale-95">Volgende Vraag</button>
+                    <!-- TEST KNOP VOOR SNEL DOORGAAN -->
+                    <button id="skip-btn" class="hidden bg-slate-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-600 transition-all opacity-70 text-sm">Snel doorspoelen (Test Mode)</button>
                 </div>
             </div>
 
@@ -179,7 +181,7 @@
                     { question: "Welke 2 stellen waren in 2024 al 25 jaar getrouwd?", answers: ["Gerard&Ellen en Marco&Marjolein", "Henk&Anne-Marie en Maaike&Gerben", "Michel&Tamara en Hans&The Secret Lover", "Keimpe&Jana en Joris&Sylke"], correctAnswerIndex: 1 },
                     { question: "Hoe oud is Grieze Duuf Oma Coby?", answers: ["83", "82", "123", "84"], correctAnswerIndex: 3 },
                     { question: "Hoe oud zijn Grieze Duuven bij elkaar?", answers: ["165", "162", "Niet te tellen", "163"], correctAnswerIndex: 1 },
-                    { questiom: "Met welke bekende clown zijn Michel en Henk ooit op de foto gegaan?", answers: ["Pipo de Clown", "Bumba", "Bassie", "PuPo de Clown"], correctAnswerIndex: 2 },
+                    { question: "Met welke bekende clown zijn Michel en Henk ooit op de foto gegaan?", answers: ["Pipo de Clown", "Bumba", "Bassie", "PuPo de Clown"], correctAnswerIndex: 2 },
                 ]
             }
         ];
@@ -202,6 +204,7 @@
             questionText: document.getElementById('question-text'),
             answerButtons: document.getElementById('answer-buttons'),
             nextBtn: document.getElementById('next-btn'),
+            skipBtn: document.getElementById('skip-btn'),
             gameIdDisplay: document.getElementById('game-id-display'),
             scoreboard: document.getElementById('scoreboard'),
             questionNumber: document.getElementById('question-number'),
@@ -238,13 +241,11 @@
             }
         }
 
-        // --- VERBETERDE REALISTISCHE HARTSLAG (HARDER VOLUME) ---
         function playRealisticHeartbeat() {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
-            // Filter om het geluid doffer te maken
             const lowpass = audioCtx.createBiquadFilter();
             lowpass.type = 'lowpass';
             lowpass.frequency.setValueAtTime(120, audioCtx.currentTime);
@@ -253,28 +254,21 @@
             const playPulse = (freq, startTime, duration, volume) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
                 osc.frequency.exponentialRampToValueAtTime(1, audioCtx.currentTime + startTime + duration);
-
-                // Volume verhoogd (maximaal 1.0 om vervorming te voorkomen)
                 gain.gain.setValueAtTime(volume, audioCtx.currentTime + startTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startTime + duration);
-
                 osc.connect(gain);
                 gain.connect(lowpass);
-
                 osc.start(audioCtx.currentTime + startTime);
                 osc.stop(audioCtx.currentTime + startTime + duration);
             };
 
-            // "Lub-Dub" ritme met verhoogd volume
-            playPulse(60, 0, 0.15, 2.0);      // Lub (Harder)
-            playPulse(55, 0.2, 0.1, 1.7);     // Dub (Harder)
+            playPulse(60, 0, 0.15, 0.9);
+            playPulse(55, 0.2, 0.1, 0.7);
         }
 
-        // Zoemer geluid (Harder volume)
         function playBuzzer() {
             if (!isSoundEnabled) return;
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -283,21 +277,16 @@
             const osc1 = audioCtx.createOscillator();
             const osc2 = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-
             osc1.type = 'sawtooth';
             osc1.frequency.setValueAtTime(100, audioCtx.currentTime);
-            
             osc2.type = 'sawtooth';
             osc2.frequency.setValueAtTime(103, audioCtx.currentTime);
-
             gain.gain.setValueAtTime(0, audioCtx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.30, audioCtx.currentTime + 0.05); // Volume verhoogd
+            gain.gain.linearRampToValueAtTime(0.25, audioCtx.currentTime + 0.05);
             gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.8);
-
             osc1.connect(gain);
             osc2.connect(gain);
             gain.connect(audioCtx.destination);
-
             osc1.start();
             osc2.start();
             osc1.stop(audioCtx.currentTime + 0.8);
@@ -390,11 +379,12 @@
         }
 
         function renderUI() {
-            const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
+            const { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers } = currentGameState;
             
             elements.answerButtons.innerHTML = '';
             elements.answerFeedback.textContent = '';
             elements.nextBtn.classList.add('hidden');
+            elements.skipBtn.classList.add('hidden');
             elements.roundName.textContent = '';
             playerAnsweredIndex = null;
             clearInterval(timerInterval);
@@ -430,6 +420,11 @@
             setTimeout(() => {
                 const q = round.questions[currentQuestionIndex];
                 displayQuestion(q, round.questions.length);
+                
+                // Als we een vraag tonen en de quizmaster zijn we, toon de skip knop
+                if (isQuizmaster && !isRevealingAnswers) {
+                    elements.skipBtn.classList.remove('hidden');
+                }
             }, 50);
         }
 
@@ -463,6 +458,8 @@
 
         function revealAnswers() {
             clearInterval(timerInterval);
+            elements.skipBtn.classList.add('hidden'); // Verberg skip knop bij resultaten
+            
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             const q = rounds[currentRoundIndex].questions[currentQuestionIndex];
             const correctAnswerIndex = q.correctAnswerIndex;
@@ -501,14 +498,23 @@
         async function advance() {
             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
             const { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers } = currentGameState;
+
             if (currentRoundIndex === -1) return updateDoc(ref, { currentRoundIndex: 0, currentQuestionIndex: -1 });
             if (currentQuestionIndex === -1) return updateDoc(ref, { currentQuestionIndex: 0, isRevealingAnswers: false });
             if (!isRevealingAnswers) return updateDoc(ref, { isRevealingAnswers: true });
+            
             if (currentQuestionIndex < rounds[currentRoundIndex].questions.length - 1) {
                 updateDoc(ref, { currentQuestionIndex: currentQuestionIndex + 1, isRevealingAnswers: false });
             } else {
                 updateDoc(ref, { currentRoundIndex: currentRoundIndex + 1, currentQuestionIndex: -1, isRevealingAnswers: false });
             }
+        }
+
+        // Functie voor de test-knop: forceer antwoord onthulling
+        async function skipToResults() {
+            if (!isQuizmaster) return;
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
+            await updateDoc(ref, { isRevealingAnswers: true });
         }
 
         function startTimer() {
@@ -528,7 +534,7 @@
                 } else if (time === 0) {
                     playBuzzer();
                     clearInterval(timerInterval);
-                    if (isQuizmaster) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId), { isRevealingAnswers: true });
+                    if (isQuizmaster) skipToResults();
                 }
             }, 1000);
         }
@@ -562,16 +568,10 @@
         elements.createGameBtn.onclick = createGame;
         elements.joinGameBtn.onclick = joinGame;
         elements.nextBtn.onclick = advance;
+        elements.skipBtn.onclick = skipToResults; // Koppel de skip knop
         elements.restartBtn.onclick = () => location.reload();
         
         init();
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
