@@ -323,6 +323,7 @@
                     currentQuestionIndex: -1,
                     rounds: quizRounds,
                     isRevealingAnswers: false,
+                    isPaused: false,
                     createdAt: new Date()
                 });
                 await setupPlayer();
@@ -377,7 +378,7 @@
                 if (!state) return;
                 const oldState = currentGameState;
                 currentGameState = state;
-                if (state.currentRoundIndex !== oldState.currentRoundIndex || state.currentQuestionIndex !== oldState.currentQuestionIndex) {
+                if (state.currentRoundIndex !== oldState.currentRoundIndex || state.currentQuestionIndex !== oldState.currentQuestionIndex || state.isPaused !== oldState.isPaused) {
                     renderUI();
                 }
                 if (state.isRevealingAnswers && !oldState.isRevealingAnswers) {
@@ -393,7 +394,7 @@
         }
 
         function renderUI() {
-            const { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers } = currentGameState;
+            const { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers, isPaused } = currentGameState;
             
             elements.answerButtons.innerHTML = '';
             elements.answerFeedback.textContent = '';
@@ -403,6 +404,7 @@
             playerAnsweredIndex = null;
             clearInterval(timerInterval);
 
+            // Lobby
             if (currentRoundIndex === -1) {
                 elements.questionText.textContent = isQuizmaster ? "Deel de code en start de quiz!" : "Wachten tot de quizmaster start...";
                 if (isQuizmaster) { 
@@ -412,14 +414,27 @@
                 return;
             }
 
+            // Einde Quiz
             if (currentRoundIndex >= rounds.length) {
                 showFinalScore();
+                return;
+            }
+
+            // Pauze Scherm
+            if (isPaused) {
+                elements.roundName.textContent = "PAUZE";
+                elements.questionText.textContent = "Tijd voor een drankje en een hapje! Pak wat lekkers!";
+                if (isQuizmaster) {
+                    elements.nextBtn.textContent = "Einde Pauze";
+                    elements.nextBtn.classList.remove('hidden');
+                }
                 return;
             }
 
             const round = rounds[currentRoundIndex];
             elements.roundName.textContent = `Ronde: ${round.name}`;
 
+            // Ronde Lobby
             if (currentQuestionIndex === -1) {
                 if (isQuizmaster) {
                     elements.questionText.textContent = "Klaar voor de volgende ronde?";
@@ -431,11 +446,11 @@
                 return;
             }
 
+            // Vraag tonen
             setTimeout(() => {
                 const q = round.questions[currentQuestionIndex];
                 displayQuestion(q, round.questions.length);
                 
-                // Als we een vraag tonen en de quizmaster zijn we, toon de skip knop
                 if (isQuizmaster && !isRevealingAnswers) {
                     elements.skipBtn.classList.remove('hidden');
                 }
@@ -472,7 +487,7 @@
 
         function revealAnswers() {
             clearInterval(timerInterval);
-            elements.skipBtn.classList.add('hidden'); // Verberg skip knop bij resultaten
+            elements.skipBtn.classList.add('hidden');
             
             const { currentRoundIndex, currentQuestionIndex, rounds } = currentGameState;
             const q = rounds[currentRoundIndex].questions[currentQuestionIndex];
@@ -511,16 +526,32 @@
 
         async function advance() {
             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'games', gameId);
-            const { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers } = currentGameState;
+            const { currentRoundIndex, currentQuestionIndex, rounds, isRevealingAnswers, isPaused } = currentGameState;
 
+            // Hervatten na pauze
+            if (isPaused) {
+                return updateDoc(ref, { isPaused: false, currentRoundIndex: currentRoundIndex + 1, currentQuestionIndex: -1, isRevealingAnswers: false });
+            }
+
+            // Start Quiz
             if (currentRoundIndex === -1) return updateDoc(ref, { currentRoundIndex: 0, currentQuestionIndex: -1 });
+            
+            // Start Ronde
             if (currentQuestionIndex === -1) return updateDoc(ref, { currentQuestionIndex: 0, isRevealingAnswers: false });
+            
+            // Antwoord onthullen
             if (!isRevealingAnswers) return updateDoc(ref, { isRevealingAnswers: true });
             
+            // Naar volgende vraag of volgende fase
             if (currentQuestionIndex < rounds[currentRoundIndex].questions.length - 1) {
                 updateDoc(ref, { currentQuestionIndex: currentQuestionIndex + 1, isRevealingAnswers: false });
             } else {
-                updateDoc(ref, { currentRoundIndex: currentRoundIndex + 1, currentQuestionIndex: -1, isRevealingAnswers: false });
+                // Einde van een ronde: Check of er een pauze moet komen (na ronde 2 (index 1) of ronde 4 (index 3))
+                if (currentRoundIndex === 1 || currentRoundIndex === 3) {
+                    updateDoc(ref, { isPaused: true, isRevealingAnswers: false });
+                } else {
+                    updateDoc(ref, { currentRoundIndex: currentRoundIndex + 1, currentQuestionIndex: -1, isRevealingAnswers: false });
+                }
             }
         }
 
@@ -558,15 +589,15 @@
             list.forEach(p => {
                 const isSelf = p.authId === userId;
                 const d = document.createElement('div');
-                // Verbeterde contrast en styling voor leesbaarheid op mobiel
-                d.className = `flex justify-between p-3 rounded-xl shadow-sm border transition-all ${
+                // Maximale leesbaarheid door hoog contrast
+                d.className = `flex justify-between p-4 rounded-xl shadow-md border transition-all mb-2 ${
                     isSelf 
-                    ? 'bg-indigo-100 border-indigo-300 ring-2 ring-indigo-200' 
-                    : 'bg-slate-50 border-slate-200 dark:bg-slate-700 dark:border-slate-600'
+                    ? 'bg-indigo-700 border-indigo-900 ring-2 ring-indigo-400' 
+                    : 'bg-white border-slate-300 dark:bg-slate-700 dark:border-slate-500'
                 }`;
                 
-                const nameClass = isSelf ? 'text-indigo-900 font-bold' : 'text-slate-700 dark:text-slate-200';
-                const scoreClass = isSelf ? 'text-indigo-700 font-extrabold' : 'text-indigo-600 dark:text-indigo-400 font-bold';
+                const nameClass = isSelf ? 'text-white font-bold text-lg' : 'text-slate-900 dark:text-slate-100 font-semibold';
+                const scoreClass = isSelf ? 'text-indigo-200 font-extrabold text-xl' : 'text-indigo-700 dark:text-indigo-400 font-bold text-lg';
                 
                 d.innerHTML = `
                     <span class="${nameClass}">${p.name} ${isSelf ? '(Jij)' : ''}</span>
